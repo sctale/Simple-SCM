@@ -15,6 +15,7 @@ import { relativeTime } from '../utils/dateUtils';
 import { hapticError, hapticLight, hapticSuccess } from '../utils/haptics';
 import Modal from '../components/Modal';
 import Toast, { type ToastState } from '../components/Toast';
+import { AppButton, Chip, EmptyState, FieldLabel } from '../components/ui';
 import type { Category, ResearchEntry, ResearchTemplate, ResearchType, Supplier } from '../types';
 
 type FilterType = 'all' | ResearchType;
@@ -113,26 +114,15 @@ export default function ResearchScreen() {
 
       {/* 类型筛选 */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-        <Pressable style={[styles.filterChip, filter === 'all' && styles.filterChipOn]} onPress={() => setFilter('all')}>
-          <Text style={[styles.filterText, filter === 'all' && styles.filterTextOn]}>全部</Text>
-        </Pressable>
+        <Chip label="全部" active={filter === 'all'} onPress={() => setFilter('all')} />
         {RESEARCH_TYPES.map((t) => (
-          <Pressable
-            key={t.key}
-            style={[styles.filterChip, filter === t.key && styles.filterChipOn]}
-            onPress={() => setFilter(t.key)}
-          >
-            <Text style={[styles.filterText, filter === t.key && styles.filterTextOn]}>{t.emoji} {t.label}</Text>
-          </Pressable>
+          <Chip key={t.key} label={`${t.emoji} ${t.label}`} active={filter === t.key} onPress={() => setFilter(t.key)} />
         ))}
       </ScrollView>
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🔍</Text>
-            <Text style={styles.emptyText}>还没有调研记录，点击右上角开始记录</Text>
-          </View>
+          <EmptyState emoji="🔍" text="还没有调研记录，点击右上角开始记录" />
         ) : (
           filtered.map((e) => {
             const t = getResearchTypeDef(e.type);
@@ -219,49 +209,41 @@ function ResearchFormModal({ visible, suppliers, categories, onClose, onSave }: 
   return (
     <Modal visible={visible} title="记录调研" onClose={onClose} height={640}>
       <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Text style={styles.fieldLabel}>调研类型</Text>
+        <FieldLabel>调研类型</FieldLabel>
         <View style={styles.chipWrap}>
           {RESEARCH_TYPES.map((t) => (
-            <Pressable
-              key={t.key}
-              style={[styles.pickChip, type === t.key && styles.pickChipOn]}
-              onPress={() => setType(t.key)}
-            >
-              <Text style={[styles.pickChipText, type === t.key && styles.pickChipTextOn]}>{t.emoji} {t.label}</Text>
-            </Pressable>
+            <Chip key={t.key} label={`${t.emoji} ${t.label}`} active={type === t.key} onPress={() => setType(t.key)} />
           ))}
         </View>
 
-        <Text style={styles.fieldLabel}>关联供应商</Text>
+        <FieldLabel>关联供应商</FieldLabel>
         <View style={styles.chipWrap}>
           {suppliers.map((s) => (
-            <Pressable
+            <Chip
               key={s.id}
-              style={[styles.pickChip, supplierId === s.id && styles.pickChipOn]}
+              label={s.name}
+              active={supplierId === s.id}
               onPress={() => setSupplierId(supplierId === s.id ? null : s.id)}
-            >
-              <Text style={[styles.pickChipText, supplierId === s.id && styles.pickChipTextOn]}>{s.name}</Text>
-            </Pressable>
+            />
           ))}
           {suppliers.length === 0 ? <Text style={styles.emptyText}>暂无供应商</Text> : null}
         </View>
 
-        <Text style={styles.fieldLabel}>关联品类</Text>
+        <FieldLabel>关联品类</FieldLabel>
         <View style={styles.chipWrap}>
           {categories.map((c) => (
-            <Pressable
+            <Chip
               key={c.id}
-              style={[styles.pickChip, categoryId === c.id && styles.pickChipOn]}
+              label={c.name}
+              active={categoryId === c.id}
               onPress={() => setCategoryId(categoryId === c.id ? null : c.id)}
-            >
-              <Text style={[styles.pickChipText, categoryId === c.id && styles.pickChipTextOn]}>{c.name}</Text>
-            </Pressable>
+            />
           ))}
           {categories.length === 0 ? <Text style={styles.emptyText}>暂无品类</Text> : null}
         </View>
 
         {/* 模板 */}
-        <Text style={styles.fieldLabel}>调研模板（点击填入问题）</Text>
+        <FieldLabel>调研模板（点击填入问题）</FieldLabel>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tplRow}>
           {templates.map((tpl) => (
             <Pressable key={tpl.id} style={styles.tplChip} onPress={() => applyTemplate(tpl)}>
@@ -270,7 +252,7 @@ function ResearchFormModal({ visible, suppliers, categories, onClose, onSave }: 
           ))}
         </ScrollView>
 
-        <Text style={styles.fieldLabel}>调研问题</Text>
+        <FieldLabel>调研问题</FieldLabel>
         <TextInput
           style={[styles.fieldInput, styles.multiline]}
           placeholder="要调研的问题（可用模板快速填入）"
@@ -280,7 +262,7 @@ function ResearchFormModal({ visible, suppliers, categories, onClose, onSave }: 
           multiline
           maxLength={1000}
         />
-        <Text style={styles.fieldLabel}>调研记录 / 发现</Text>
+        <FieldLabel>调研记录 / 发现</FieldLabel>
         <TextInput
           style={[styles.fieldInput, styles.multiline]}
           placeholder="访谈纪要、现场观察、数据…"
@@ -290,7 +272,7 @@ function ResearchFormModal({ visible, suppliers, categories, onClose, onSave }: 
           multiline
           maxLength={2000}
         />
-        <Text style={styles.fieldLabel}>评分（1-5）</Text>
+        <FieldLabel>评分（1-5）</FieldLabel>
         <View style={styles.scaleRow}>
           {[1, 2, 3, 4, 5].map((n) => (
             <Pressable key={n} style={[styles.starCell, rating === n && styles.starCellOn]} onPress={() => setRating(rating === n ? null : n)}>
@@ -298,7 +280,7 @@ function ResearchFormModal({ visible, suppliers, categories, onClose, onSave }: 
             </Pressable>
           ))}
         </View>
-        <Text style={styles.fieldLabel}>结论</Text>
+        <FieldLabel>结论</FieldLabel>
         <TextInput
           style={styles.fieldInput}
           placeholder="调研结论（可选）"
@@ -308,13 +290,11 @@ function ResearchFormModal({ visible, suppliers, categories, onClose, onSave }: 
           maxLength={500}
         />
       </ScrollView>
-      <Pressable
-        style={[styles.saveBtn, (!question.trim() && !content.trim()) && styles.saveBtnDisabled]}
+      <AppButton
+        title="保存记录"
         onPress={() => onSave({ supplierId, categoryId, type, question, content, rating, conclusion })}
         disabled={!question.trim() && !content.trim()}
-      >
-        <Text style={styles.saveBtnText}>保存记录</Text>
-      </Pressable>
+      />
     </Modal>
   );
 }
@@ -329,21 +309,12 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.pill, paddingHorizontal: SPACING.md, paddingVertical: 10, minHeight: 44, justifyContent: 'center', ...SHADOW_PRIMARY },
   addBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.sm, fontWeight: '700' },
   filterRow: { gap: SPACING.sm, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
-  filterChip: {
-    paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
-  },
-  filterChipOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  filterText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600' },
-  filterTextOn: { color: '#FFFFFF' },
   list: { flex: 1 },
   listContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
-  empty: { alignItems: 'center', paddingVertical: SPACING.xxl, gap: SPACING.sm },
-  emptyEmoji: { fontSize: 40, opacity: 0.5 },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },
   entryCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md, marginBottom: SPACING.sm,
+    padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW,
   },
   entryTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xs + 2 },
   typeBadge: { borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 3 },
@@ -360,20 +331,12 @@ const styles = StyleSheet.create({
   },
   // 表单
   formScroll: { flex: 1 },
-  fieldLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, fontWeight: '600', marginTop: SPACING.sm, marginBottom: 6 },
   fieldInput: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,
     paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT_SIZE.md, color: COLORS.text,
   },
   multiline: { minHeight: 60, textAlignVertical: 'top' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  pickChip: {
-    paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
-  },
-  pickChipOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  pickChipText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600' },
-  pickChipTextOn: { color: '#FFFFFF' },
   tplRow: { gap: SPACING.sm, paddingVertical: 2 },
   tplChip: {
     backgroundColor: COLORS.accentLight, borderRadius: RADIUS.pill,
@@ -388,7 +351,4 @@ const styles = StyleSheet.create({
   starCellOn: { backgroundColor: '#FFF3E0', borderColor: '#FFB74D' },
   starText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '700' },
   starTextOn: { color: '#E65100' },
-  saveBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.lg, paddingVertical: 13, alignItems: 'center', marginTop: SPACING.md, ...SHADOW_PRIMARY },
-  saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
 });

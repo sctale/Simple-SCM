@@ -17,9 +17,10 @@ import { hapticError, hapticLight, hapticSuccess } from '../utils/haptics';
 import Modal from '../components/Modal';
 import AiChatModal from '../components/AiChatModal';
 import Toast, { type ToastState } from '../components/Toast';
+import { AppButton, Card, FieldLabel, SectionHeader } from '../components/ui';
 import type { ActionItem, AiModel, Risk } from '../types';
 
-const APP_VERSION = '0.1.2';
+const APP_VERSION = '0.1.3';
 
 export default function MineScreen() {
   const [models, setModels] = useState<AiModel[]>([]);
@@ -238,8 +239,8 @@ export default function MineScreen() {
         <Text style={styles.pageTitle}>我的</Text>
 
         {/* AI 模型 */}
-        <Text style={styles.sectionTitle}>🤖 AI 模型</Text>
-        <View style={styles.card}>
+        <SectionHeader icon="🤖" title="AI 模型" />
+        <Card>
           <Pressable style={styles.aiAssistantBtn} onPress={() => setAiVisible(true)}>
             <Text style={styles.aiAssistantText}>💬 打开 AI 助手</Text>
           </Pressable>
@@ -265,11 +266,11 @@ export default function MineScreen() {
           <Pressable style={styles.addLink} onPress={() => setCustomModal(true)}>
             <Text style={styles.addLinkText}>＋ 添加自定义模型</Text>
           </Pressable>
-        </View>
+        </Card>
 
         {/* 行动项 */}
-        <Text style={styles.sectionTitle}>📌 行动项</Text>
-        <View style={styles.card}>
+        <SectionHeader icon="📌" title="行动项" />
+        <Card>
           {actions.length === 0 ? (
             <Text style={styles.emptyText}>暂无行动项</Text>
           ) : (
@@ -289,11 +290,11 @@ export default function MineScreen() {
           <Pressable style={styles.addLink} onPress={() => setActionModal(true)}>
             <Text style={styles.addLinkText}>＋ 添加行动项</Text>
           </Pressable>
-        </View>
+        </Card>
 
         {/* 风险登记册 */}
-        <Text style={styles.sectionTitle}>⚠️ 风险登记册（PMP）</Text>
-        <View style={styles.card}>
+        <SectionHeader icon="⚠️" title="风险登记册（PMP）" />
+        <Card>
           {risks.length === 0 ? (
             <Text style={styles.emptyText}>暂无风险登记</Text>
           ) : (
@@ -325,11 +326,11 @@ export default function MineScreen() {
           <Pressable style={styles.addLink} onPress={() => setRiskModal(true)}>
             <Text style={styles.addLinkText}>＋ 登记风险</Text>
           </Pressable>
-        </View>
+        </Card>
 
         {/* 数据备份 */}
-        <Text style={styles.sectionTitle}>💾 数据备份</Text>
-        <View style={styles.card}>
+        <SectionHeader icon="💾" title="数据备份" />
+        <Card>
           <View style={styles.btnRow}>
             <Pressable style={[styles.backupBtn, { backgroundColor: COLORS.accent }]} onPress={handleExport}>
               <Text style={styles.backupBtnText}>导出 JSON</Text>
@@ -339,22 +340,22 @@ export default function MineScreen() {
             </Pressable>
           </View>
           <Text style={styles.hint}>数据完全保存在本地，可导出 JSON 备份或跨设备导入</Text>
-        </View>
+        </Card>
 
         {/* 关于 */}
-        <Text style={styles.sectionTitle}>关于</Text>
-        <View style={styles.card}>
+        <SectionHeader title="关于" />
+        <Card>
           <View style={styles.aboutRow}>
             <Text style={styles.aboutName}>随身供应链 Simple-SCM</Text>
             <Text style={styles.aboutVersion}>v{APP_VERSION}</Text>
           </View>
           <Text style={styles.hint}>融合 CPSM（供应管理）与 PMP（项目管理）理念的供应商战略管理工具</Text>
-        </View>
+        </Card>
       </ScrollView>
 
       {/* 配置 Key 弹窗 */}
       <Modal visible={!!keyModal} title={keyModal ? `配置 ${keyModal.name} API Key` : ''} onClose={() => setKeyModal(null)}>
-        <Text style={styles.fieldLabel}>API Key</Text>
+        <FieldLabel>API Key</FieldLabel>
         <TextInput
           style={styles.fieldInput}
           placeholder="粘贴 API Key"
@@ -366,9 +367,7 @@ export default function MineScreen() {
           maxLength={200}
         />
         <Text style={styles.hint}>Key 使用系统安全存储加密，仅存本机</Text>
-        <Pressable style={styles.saveBtn} onPress={handleSaveKey}>
-          <Text style={styles.saveBtnText}>保存</Text>
-        </Pressable>
+        <AppButton title="保存" onPress={handleSaveKey} />
       </Modal>
 
       {/* 自定义模型弹窗 */}
@@ -393,15 +392,13 @@ function CustomModelModal({ visible, onClose, onSave }: {
   useEffect(() => { if (visible) { setName(''); setBaseUrl(''); setModel(''); } }, [visible]);
   return (
     <Modal visible={visible} title="添加自定义模型" onClose={onClose}>
-      <Text style={styles.fieldLabel}>显示名称</Text>
+      <FieldLabel>显示名称</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder="如 我的模型" placeholderTextColor={COLORS.textTertiary} value={name} onChangeText={setName} maxLength={20} />
-      <Text style={styles.fieldLabel}>API Base URL</Text>
+      <FieldLabel>API Base URL</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder="https://api.xxx.com/v1" placeholderTextColor={COLORS.textTertiary} value={baseUrl} onChangeText={setBaseUrl} autoCapitalize="none" maxLength={100} />
-      <Text style={styles.fieldLabel}>模型标识</Text>
+      <FieldLabel>模型标识</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder="如 deepseek-chat" placeholderTextColor={COLORS.textTertiary} value={model} onChangeText={setModel} autoCapitalize="none" maxLength={50} />
-      <Pressable style={styles.saveBtn} onPress={() => onSave(name, baseUrl, model)}>
-        <Text style={styles.saveBtnText}>添加</Text>
-      </Pressable>
+      <AppButton title="添加" onPress={() => onSave(name, baseUrl, model)} />
     </Modal>
   );
 }
@@ -416,17 +413,15 @@ function RiskModal({ visible, onClose, onSave }: {
   useEffect(() => { if (visible) { setTitle(''); setProbability(3); setImpact(3); setStrategy(''); } }, [visible]);
   return (
     <Modal visible={visible} title="登记风险" onClose={onClose} height={480}>
-      <Text style={styles.fieldLabel}>风险描述</Text>
+      <FieldLabel>风险描述</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder="如 关键原料单一供应商" placeholderTextColor={COLORS.textTertiary} value={title} onChangeText={setTitle} maxLength={100} />
-      <Text style={styles.fieldLabel}>发生概率（1-5）</Text>
+      <FieldLabel>发生概率（1-5）</FieldLabel>
       <ScaleRow value={probability} onChange={setProbability} />
-      <Text style={styles.fieldLabel}>影响程度（1-5）</Text>
+      <FieldLabel>影响程度（1-5）</FieldLabel>
       <ScaleRow value={impact} onChange={setImpact} />
-      <Text style={styles.fieldLabel}>应对策略</Text>
+      <FieldLabel>应对策略</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder="如 开发第二供应商 / 安全库存" placeholderTextColor={COLORS.textTertiary} value={strategy} onChangeText={setStrategy} maxLength={100} />
-      <Pressable style={styles.saveBtn} onPress={() => onSave({ title, probability, impact, strategy })}>
-        <Text style={styles.saveBtnText}>登记</Text>
-      </Pressable>
+      <AppButton title="登记" onPress={() => onSave({ title, probability, impact, strategy })} />
     </Modal>
   );
 }
@@ -440,15 +435,13 @@ function ActionModal({ visible, onClose, onSave }: {
   useEffect(() => { if (visible) { setTitle(''); setOwner(''); setDueDate(''); } }, [visible]);
   return (
     <Modal visible={visible} title="添加行动项" onClose={onClose}>
-      <Text style={styles.fieldLabel}>任务</Text>
+      <FieldLabel>任务</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder="如 联系供应商索要报价" placeholderTextColor={COLORS.textTertiary} value={title} onChangeText={setTitle} maxLength={100} />
-      <Text style={styles.fieldLabel}>责任人</Text>
+      <FieldLabel>责任人</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder="姓名（可选）" placeholderTextColor={COLORS.textTertiary} value={owner} onChangeText={setOwner} maxLength={20} />
-      <Text style={styles.fieldLabel}>截止日期（YYYY-MM-DD，可选）</Text>
+      <FieldLabel>截止日期（YYYY-MM-DD，可选）</FieldLabel>
       <TextInput style={styles.fieldInput} placeholder={getToday()} placeholderTextColor={COLORS.textTertiary} value={dueDate} onChangeText={setDueDate} maxLength={10} />
-      <Pressable style={styles.saveBtn} onPress={() => onSave({ title, owner, dueDate: dueDate || null })}>
-        <Text style={styles.saveBtnText}>添加</Text>
-      </Pressable>
+      <AppButton title="添加" onPress={() => onSave({ title, owner, dueDate: dueDate || null })} />
     </Modal>
   );
 }
@@ -470,11 +463,6 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   content: { padding: SPACING.lg, paddingBottom: SPACING.xxl },
   pageTitle: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm },
-  sectionTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.textSecondary, marginTop: SPACING.sm, marginBottom: SPACING.sm },
-  card: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md, marginBottom: SPACING.md, gap: SPACING.sm + 2, ...SHADOW,
-  },
   aiAssistantBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginBottom: SPACING.xs, ...SHADOW_PRIMARY },
   aiAssistantText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
   modelRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
@@ -516,7 +504,6 @@ const styles = StyleSheet.create({
   aboutRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   aboutName: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
   aboutVersion: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },
-  fieldLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, fontWeight: '600', marginTop: SPACING.sm, marginBottom: 6 },
   fieldInput: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,
     paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT_SIZE.md, color: COLORS.text,
@@ -529,6 +516,4 @@ const styles = StyleSheet.create({
   scaleCellOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
   scaleText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '700' },
   scaleTextOn: { color: '#FFFFFF' },
-  saveBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.lg, paddingVertical: 13, alignItems: 'center', marginTop: SPACING.md, ...SHADOW_PRIMARY },
-  saveBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
 });

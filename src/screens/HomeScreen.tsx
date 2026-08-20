@@ -10,6 +10,7 @@ import { relativeTime } from '../utils/dateUtils';
 import { hapticError, hapticLight, hapticSuccess } from '../utils/haptics';
 import AiChatModal from '../components/AiChatModal';
 import Toast, { type ToastState } from '../components/Toast';
+import { Card, Chip, EmptyState, SectionHeader } from '../components/ui';
 import type { InsightTag } from '../types';
 
 interface Props {
@@ -114,7 +115,7 @@ export default function HomeScreen({ onGoSupplier, onGoCategory, onGoResearch }:
         </View>
 
         {/* 快捷洞察 */}
-        <View style={styles.card}>
+        <Card>
           <Text style={styles.cardTitle}>💡 快速记录一条洞察</Text>
           <TextInput
             style={styles.quickInput}
@@ -128,20 +129,20 @@ export default function HomeScreen({ onGoSupplier, onGoCategory, onGoResearch }:
           <View style={styles.quickFooter}>
             <View style={styles.tagRow}>
               {INSIGHT_TAGS.map((t) => (
-                <Pressable
+                <Chip
                   key={t.key}
-                  style={[styles.tagChip, quickTag === t.key && { backgroundColor: t.color, borderColor: t.color }]}
+                  label={t.label}
+                  active={quickTag === t.key}
+                  color={t.color}
                   onPress={() => { setQuickTag(t.key); hapticLight(); }}
-                >
-                  <Text style={[styles.tagText, quickTag === t.key && styles.tagTextOn]}>{t.label}</Text>
-                </Pressable>
+                />
               ))}
             </View>
             <Pressable style={styles.quickSave} onPress={handleQuickSave}>
               <Text style={styles.quickSaveText}>记录</Text>
             </Pressable>
           </View>
-        </View>
+        </Card>
 
         {/* 统计概览 */}
         <View style={styles.statRow}>
@@ -157,8 +158,8 @@ export default function HomeScreen({ onGoSupplier, onGoCategory, onGoResearch }:
         {/* 待办行动项 */}
         {todos.length > 0 ? (
           <>
-            <Text style={styles.sectionTitle}>📌 待办行动项</Text>
-            <View style={styles.card}>
+            <SectionHeader icon="📌" title="待办行动项" />
+            <Card>
               {todos.map((t) => (
                 <View key={t.id} style={styles.todoRow}>
                   <Text style={styles.todoDot}>•</Text>
@@ -166,16 +167,16 @@ export default function HomeScreen({ onGoSupplier, onGoCategory, onGoResearch }:
                   {t.owner ? <Text style={styles.todoOwner}>{t.owner}</Text> : null}
                 </View>
               ))}
-            </View>
+            </Card>
           </>
         ) : null}
 
         {/* 最近洞察 */}
-        <Text style={styles.sectionTitle}>🕐 最近洞察</Text>
+        <SectionHeader icon="🕐" title="最近洞察" />
         {insights.length === 0 ? (
-          <View style={styles.card}>
-            <Text style={styles.emptyText}>还没有洞察记录，用上方输入框记录第一条吧</Text>
-          </View>
+          <Card>
+            <EmptyState emoji="💡" text="还没有洞察记录，用上方输入框记录第一条吧" />
+          </Card>
         ) : (
           insights.map((ins) => {
             const tag = getInsightTagDef(ins.tag);
@@ -227,15 +228,6 @@ const styles = StyleSheet.create({
   },
   aiBtnEmoji: { fontSize: 16 },
   aiBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.sm, fontWeight: '700' },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    ...SHADOW,
-  },
   cardTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
   quickInput: {
     backgroundColor: COLORS.bgAlt,
@@ -253,17 +245,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: SPACING.sm,
   },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs + 2 },
-  tagChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tagText: { fontSize: FONT_SIZE.xs, color: COLORS.textSecondary, fontWeight: '600' },
-  tagTextOn: { color: '#FFFFFF' },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
   quickSave: {
     backgroundColor: COLORS.accent,
     borderRadius: RADIUS.md,
@@ -286,13 +268,6 @@ const styles = StyleSheet.create({
   statEmoji: { fontSize: 22, marginBottom: 4 },
   statValue: { fontSize: FONT_SIZE.xl, fontWeight: '800', color: COLORS.text },
   statLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, marginTop: 2 },
-  sectionTitle: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
-  },
   todoRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -302,7 +277,6 @@ const styles = StyleSheet.create({
   todoDot: { color: COLORS.accent, fontSize: FONT_SIZE.md },
   todoText: { flex: 1, fontSize: FONT_SIZE.md, color: COLORS.text },
   todoOwner: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary },
-  emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary, textAlign: 'center', paddingVertical: SPACING.sm },
   insightRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

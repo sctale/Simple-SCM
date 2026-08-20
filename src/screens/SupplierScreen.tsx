@@ -17,6 +17,7 @@ import { hapticError, hapticLight, hapticSuccess } from '../utils/haptics';
 import Modal from '../components/Modal';
 import AiChatModal from '../components/AiChatModal';
 import Toast, { type ToastState } from '../components/Toast';
+import { AppButton, Chip, EmptyState, FieldLabel } from '../components/ui';
 import type { Category, Insight, ResearchEntry, Supplier, SupplierGrade, SupplierStatus } from '../types';
 
 export default function SupplierScreen() {
@@ -145,20 +146,15 @@ export default function SupplierScreen() {
           maxLength={20}
         />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gradeRow}>
-          <Pressable
-            style={[styles.gradeChip, gradeFilter === 'all' && styles.gradeChipOn]}
-            onPress={() => setGradeFilter('all')}
-          >
-            <Text style={[styles.gradeChipText, gradeFilter === 'all' && styles.gradeChipTextOn]}>全部</Text>
-          </Pressable>
+          <Chip label="全部" active={gradeFilter === 'all'} onPress={() => setGradeFilter('all')} />
           {SUPPLIER_GRADES.map((g) => (
-            <Pressable
+            <Chip
               key={g.key}
-              style={[styles.gradeChip, gradeFilter === g.key && { backgroundColor: g.color, borderColor: g.color }]}
+              label={g.label}
+              active={gradeFilter === g.key}
+              color={g.color}
               onPress={() => setGradeFilter(g.key)}
-            >
-              <Text style={[styles.gradeChipText, gradeFilter === g.key && styles.gradeChipTextOn]}>{g.label}</Text>
-            </Pressable>
+            />
           ))}
         </ScrollView>
       </View>
@@ -166,10 +162,7 @@ export default function SupplierScreen() {
       {/* 列表 */}
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🏭</Text>
-            <Text style={styles.emptyText}>还没有供应商，点击右上角新增</Text>
-          </View>
+          <EmptyState emoji="🏭" text="还没有供应商，点击右上角新增" />
         ) : (
           filtered.map((s) => {
             const grade = getGradeDef(s.grade);
@@ -249,63 +242,56 @@ function SupplierFormModal({ visible, editing, categories, onClose, onSave }: {
   return (
     <Modal visible={visible} title={editing ? '编辑供应商' : '新增供应商'} onClose={onClose} height={620}>
       <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Text style={styles.fieldLabel}>名称 *</Text>
+        <FieldLabel>名称 *</FieldLabel>
         <TextInput style={styles.fieldInput} placeholder="供应商名称" placeholderTextColor={COLORS.textTertiary} value={name} onChangeText={setName} maxLength={40} />
-        <Text style={styles.fieldLabel}>编码</Text>
+        <FieldLabel>编码</FieldLabel>
         <TextInput style={styles.fieldInput} placeholder="内部编码（可选）" placeholderTextColor={COLORS.textTertiary} value={code} onChangeText={setCode} maxLength={20} />
-        <Text style={styles.fieldLabel}>所属品类</Text>
+        <FieldLabel>所属品类</FieldLabel>
         <View style={styles.chipWrap}>
           {categories.map((c) => (
-            <Pressable
+            <Chip
               key={c.id}
-              style={[styles.pickChip, categoryId === c.id && styles.pickChipOn]}
+              label={c.name}
+              active={categoryId === c.id}
               onPress={() => setCategoryId(categoryId === c.id ? null : c.id)}
-            >
-              <Text style={[styles.pickChipText, categoryId === c.id && styles.pickChipTextOn]}>{c.name}</Text>
-            </Pressable>
+            />
           ))}
-          {categories.length === 0 ? <Text style={styles.emptyText}>请先在「品类」页创建品类</Text> : null}
+          {categories.length === 0 ? <Text style={styles.emptyNote}>请先在「品类」页创建品类</Text> : null}
         </View>
-        <Text style={styles.fieldLabel}>分级</Text>
+        <FieldLabel>分级</FieldLabel>
         <View style={styles.chipWrap}>
           {SUPPLIER_GRADES.map((g) => (
-            <Pressable
+            <Chip
               key={g.key}
-              style={[styles.pickChip, grade === g.key && { backgroundColor: g.color, borderColor: g.color }]}
+              label={g.label}
+              active={grade === g.key}
+              color={g.color}
               onPress={() => setGrade(g.key)}
-            >
-              <Text style={[styles.pickChipText, grade === g.key && styles.pickChipTextOn]}>{g.label}</Text>
-            </Pressable>
+            />
           ))}
         </View>
-        <Text style={styles.fieldLabel}>状态</Text>
+        <FieldLabel>状态</FieldLabel>
         <View style={styles.chipWrap}>
           {SUPPLIER_STATUSES.map((s) => (
-            <Pressable
+            <Chip
               key={s.key}
-              style={[styles.pickChip, status === s.key && { backgroundColor: s.color, borderColor: s.color }]}
+              label={s.label}
+              active={status === s.key}
+              color={s.color}
               onPress={() => setStatus(s.key)}
-            >
-              <Text style={[styles.pickChipText, status === s.key && styles.pickChipTextOn]}>{s.label}</Text>
-            </Pressable>
+            />
           ))}
         </View>
-        <Text style={styles.fieldLabel}>联系人</Text>
+        <FieldLabel>联系人</FieldLabel>
         <TextInput style={styles.fieldInput} placeholder="姓名" placeholderTextColor={COLORS.textTertiary} value={contact} onChangeText={setContact} maxLength={20} />
-        <Text style={styles.fieldLabel}>电话</Text>
+        <FieldLabel>电话</FieldLabel>
         <TextInput style={styles.fieldInput} placeholder="联系电话" placeholderTextColor={COLORS.textTertiary} value={phone} onChangeText={setPhone} keyboardType="phone-pad" maxLength={20} />
-        <Text style={styles.fieldLabel}>邮箱</Text>
+        <FieldLabel>邮箱</FieldLabel>
         <TextInput style={styles.fieldInput} placeholder="邮箱" placeholderTextColor={COLORS.textTertiary} value={email} onChangeText={setEmail} keyboardType="email-address" maxLength={40} />
-        <Text style={styles.fieldLabel}>备注</Text>
+        <FieldLabel>备注</FieldLabel>
         <TextInput style={[styles.fieldInput, styles.multiline]} placeholder="其他信息" placeholderTextColor={COLORS.textTertiary} value={note} onChangeText={setNote} multiline maxLength={300} />
       </ScrollView>
-      <Pressable
-        style={[styles.saveBtn, !name.trim() && styles.saveBtnDisabled]}
-        onPress={() => onSave({ name, code, categoryId, grade, status, contact, phone, email, note })}
-        disabled={!name.trim()}
-      >
-        <Text style={styles.saveBtnText}>保存</Text>
-      </Pressable>
+      <AppButton title="保存" onPress={() => onSave({ name, code, categoryId, grade, status, contact, phone, email, note })} disabled={!name.trim()} />
     </Modal>
   );
 }
@@ -427,18 +413,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md, paddingVertical: 9, fontSize: FONT_SIZE.md, color: COLORS.text, ...SHADOW,
   },
   gradeRow: { gap: SPACING.sm, paddingVertical: 2 },
-  gradeChip: {
-    paddingHorizontal: SPACING.md, paddingVertical: 6, borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
-  },
-  gradeChipOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  gradeChipText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600' },
-  gradeChipTextOn: { color: '#FFFFFF' },
   list: { flex: 1, marginTop: SPACING.sm },
   listContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
-  empty: { alignItems: 'center', paddingVertical: SPACING.xxl, gap: SPACING.sm },
-  emptyEmoji: { fontSize: 40, opacity: 0.5 },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },
+  emptyNote: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary, marginTop: SPACING.xs },
   supplierCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border,
     padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW,
@@ -452,23 +430,12 @@ const styles = StyleSheet.create({
   statusDot: { width: 7, height: 7, borderRadius: 3.5 },
   // 表单
   formScroll: { flex: 1 },
-  fieldLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, fontWeight: '600', marginTop: SPACING.sm, marginBottom: 6 },
   fieldInput: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,
     paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT_SIZE.md, color: COLORS.text,
   },
   multiline: { minHeight: 64, textAlignVertical: 'top' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  pickChip: {
-    paddingHorizontal: SPACING.md, paddingVertical: 7, borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border,
-  },
-  pickChipOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
-  pickChipText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600' },
-  pickChipTextOn: { color: '#FFFFFF' },
-  saveBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.lg, paddingVertical: 13, alignItems: 'center', marginTop: SPACING.md, ...SHADOW_PRIMARY },
-  saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
   // 详情
   detailHeader: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
   statusDotRow: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: RADIUS.pill, paddingHorizontal: 10, paddingVertical: 3 },

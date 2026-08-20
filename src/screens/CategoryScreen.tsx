@@ -15,6 +15,7 @@ import Modal from '../components/Modal';
 import KraljicMatrix from '../components/KraljicMatrix';
 import AiChatModal from '../components/AiChatModal';
 import Toast, { type ToastState } from '../components/Toast';
+import { AppButton, Card, EmptyState, FieldLabel } from '../components/ui';
 import type { Category, Supplier } from '../types';
 
 export default function CategoryScreen() {
@@ -117,7 +118,7 @@ export default function CategoryScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Kraljic 矩阵 */}
-        <View style={styles.card}>
+        <Card>
           <Text style={styles.cardTitle}>Kraljic 品类矩阵</Text>
           <KraljicMatrix categories={categories} onSelect={(c) => setDetail(c)} />
           <View style={styles.legendRow}>
@@ -131,14 +132,11 @@ export default function CategoryScreen() {
               );
             })}
           </View>
-        </View>
+        </Card>
 
         {/* 品类列表 */}
         {categories.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyEmoji}>🗂️</Text>
-            <Text style={styles.emptyText}>还没有品类，点击右上角创建第一个品类</Text>
-          </View>
+          <EmptyState emoji="🗂️" text="还没有品类，点击右上角创建第一个品类" />
         ) : (
           categories.map((c) => {
             const q = getQuadrantDef(getKraljicQuadrant(c.kraljicX, c.kraljicY));
@@ -209,12 +207,12 @@ function CategoryFormModal({ visible, editing, onClose, onSave }: {
   return (
     <Modal visible={visible} title={editing ? '编辑品类' : '新增品类'} onClose={onClose} height={560}>
       <ScrollView style={styles.formScroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Text style={styles.fieldLabel}>品类名称 *</Text>
+        <FieldLabel>品类名称 *</FieldLabel>
         <TextInput style={styles.fieldInput} placeholder="如 电子元器件 / 包装材料" placeholderTextColor={COLORS.textTertiary} value={name} onChangeText={setName} maxLength={30} />
 
-        <Text style={styles.fieldLabel}>供应风险（1-5）</Text>
+        <FieldLabel>供应风险（1-5）</FieldLabel>
         <ScalePicker value={kraljicX} onChange={setKraljicX} />
-        <Text style={styles.fieldLabel}>采购影响（1-5）</Text>
+        <FieldLabel>采购影响（1-5）</FieldLabel>
         <ScalePicker value={kraljicY} onChange={setKraljicY} />
 
         <View style={[styles.quadPreview, { backgroundColor: `${quadrant.color}14` }]}>
@@ -224,7 +222,7 @@ function CategoryFormModal({ visible, editing, onClose, onSave }: {
           <Text style={styles.quadPreviewStrategy}>{quadrant.strategy}</Text>
         </View>
 
-        <Text style={styles.fieldLabel}>品类战略</Text>
+        <FieldLabel>品类战略</FieldLabel>
         <TextInput
           style={[styles.fieldInput, styles.multiline]}
           placeholder="描述该品类的采购战略、目标、行动计划…"
@@ -234,12 +232,10 @@ function CategoryFormModal({ visible, editing, onClose, onSave }: {
           multiline
           maxLength={1000}
         />
-        <Text style={styles.fieldLabel}>备注</Text>
+        <FieldLabel>备注</FieldLabel>
         <TextInput style={styles.fieldInput} placeholder="其他信息（可选）" placeholderTextColor={COLORS.textTertiary} value={note} onChangeText={setNote} maxLength={200} />
       </ScrollView>
-      <Pressable style={[styles.saveBtn, !name.trim() && styles.saveBtnDisabled]} onPress={() => onSave({ name, kraljicX, kraljicY, strategy, note })} disabled={!name.trim()}>
-        <Text style={styles.saveBtnText}>保存</Text>
-      </Pressable>
+      <AppButton title="保存" onPress={() => onSave({ name, kraljicX, kraljicY, strategy, note })} disabled={!name.trim()} />
     </Modal>
   );
 }
@@ -324,21 +320,15 @@ const styles = StyleSheet.create({
   addBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.sm, fontWeight: '700' },
   scroll: { flex: 1, marginTop: SPACING.sm },
   content: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
-  card: {
-    backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md, marginBottom: SPACING.md, ...SHADOW,
-  },
   cardTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.sm },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.md, marginTop: SPACING.sm },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary },
-  empty: { alignItems: 'center', paddingVertical: SPACING.xxl, gap: SPACING.sm },
-  emptyEmoji: { fontSize: 40, opacity: 0.5 },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },
   catCard: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.border,
-    padding: SPACING.md, marginBottom: SPACING.sm,
+    padding: SPACING.md, marginBottom: SPACING.sm, ...SHADOW,
   },
   catTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   catName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text, flex: 1 },
@@ -349,7 +339,6 @@ const styles = StyleSheet.create({
   strategyPreview: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs + 2, lineHeight: 19 },
   // 表单
   formScroll: { flex: 1 },
-  fieldLabel: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, fontWeight: '600', marginTop: SPACING.sm, marginBottom: 6 },
   fieldInput: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,
     paddingHorizontal: SPACING.md, paddingVertical: 10, fontSize: FONT_SIZE.md, color: COLORS.text,
@@ -366,9 +355,6 @@ const styles = StyleSheet.create({
   quadPreview: { borderRadius: RADIUS.md, padding: SPACING.md, marginTop: SPACING.sm },
   quadPreviewText: { fontSize: FONT_SIZE.md, fontWeight: '800' },
   quadPreviewStrategy: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 4, lineHeight: 19 },
-  saveBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.lg, paddingVertical: 13, alignItems: 'center', marginTop: SPACING.md, ...SHADOW_PRIMARY },
-  saveBtnDisabled: { opacity: 0.4 },
-  saveBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
   // 详情
   detailRow: { flexDirection: 'row', paddingVertical: 6, gap: SPACING.md },
   detailLabel: { width: 70, fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },

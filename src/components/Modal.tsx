@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   Animated, Modal as RNModal, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS, SPACING } from '../constants';
 
 interface Props {
@@ -12,14 +13,18 @@ interface Props {
   height?: number;
 }
 
-// 通用底部弹窗（下滑关闭 + 淡入淡出 + 高度自适应屏幕）
+// 通用底部弹窗（下滑关闭 + 淡入淡出 + 安全区自适应 + 内容可控）
 export default function Modal({ visible, title, onClose, children, height }: Props) {
   const translateY = useRef(new Animated.Value(600)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const { height: winHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
-  // 高度上限 85%，避免小屏溢出
-  const sheetHeight = height != null ? Math.min(height, winHeight * 0.85) : undefined;
+  // 高度统一上限 85%，避免小屏/键盘弹出时溢出
+  const maxSheetHeight = winHeight * 0.85;
+  // 显式指定高度时用固定高度；否则交给内容自适应（仅约束上限）
+  const sheetHeight = height != null ? Math.min(height, maxSheetHeight) : undefined;
+  const sheetPaddingBottom = Math.max(SPACING.xxl, insets.bottom + SPACING.md);
 
   useEffect(() => {
     if (visible) {
@@ -68,7 +73,15 @@ export default function Modal({ visible, title, onClose, children, height }: Pro
         <Animated.View style={[styles.absFill, { opacity: backdropOpacity }]}>
           <Pressable style={styles.backdrop} onPress={close} />
         </Animated.View>
-        <Animated.View style={[styles.sheet, sheetHeight ? { height: sheetHeight } : null, { transform: [{ translateY }] }]}>
+        <Animated.View
+          style={[
+            styles.sheet,
+            sheetHeight != null
+              ? { height: sheetHeight }
+              : { maxHeight: maxSheetHeight },
+            { paddingBottom: sheetPaddingBottom, transform: [{ translateY }] },
+          ]}
+        >
           <View style={styles.handleArea} {...panResponder.panHandlers}>
             <View style={styles.handle} />
           </View>
@@ -101,8 +114,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
     padding: SPACING.lg,
-    paddingBottom: SPACING.xxl,
-    maxHeight: '90%',
   },
   handleArea: {
     alignSelf: 'center',
