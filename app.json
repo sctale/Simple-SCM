@@ -2,7 +2,7 @@
   "expo": {
     "name": "随身供应链",
     "slug": "Simple-SCM",
-    "version": "0.1.4",
+    "version": "0.1.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

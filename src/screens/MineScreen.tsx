@@ -20,7 +20,7 @@ import Toast, { type ToastState } from '../components/Toast';
 import { AppButton, Card, FieldLabel, SectionHeader } from '../components/ui';
 import type { ActionItem, AiModel, Risk } from '../types';
 
-const APP_VERSION = '0.1.4';
+const APP_VERSION = '0.1.5';
 
 export default function MineScreen() {
   const [models, setModels] = useState<AiModel[]>([]);

@@ -144,7 +144,8 @@ export default function ResearchScreen() {
                   {e.rating != null ? (
                     <Text style={styles.ratingText}>{'★'.repeat(e.rating)}{'☆'.repeat(5 - e.rating)}</Text>
                   ) : null}
-                  <Text style={styles.metaText}>· {relativeTime(e.createdAt)}</Text>
+                  <Text style={styles.metaDivider}>·</Text>
+                  <Text style={styles.metaText}>{relativeTime(e.createdAt)}</Text>
                 </View>
                 {e.conclusion ? (
                   <Text style={styles.entryConclusion}>结论：{e.conclusion}</Text>
@@ -322,12 +323,15 @@ const styles = StyleSheet.create({
   deleteText: { fontSize: 13, color: COLORS.textTertiary, padding: 4 },
   entryQuestion: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text, lineHeight: 21, marginBottom: 4 },
   entryContent: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, lineHeight: 20 },
-  entryMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.xs + 2 },
+  entryMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: SPACING.sm },
   metaText: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary },
-  ratingText: { fontSize: FONT_SIZE.xs, color: '#FFB74D', letterSpacing: 1 },
+  metaDivider: { fontSize: FONT_SIZE.xs, color: COLORS.borderSubtle, marginHorizontal: 2 },
+  ratingText: { fontSize: FONT_SIZE.xs, color: '#FFB74D', letterSpacing: 1, marginRight: 4 },
   entryConclusion: {
     fontSize: FONT_SIZE.sm, color: COLORS.accentDark, backgroundColor: COLORS.accentLight,
-    borderRadius: RADIUS.sm, padding: SPACING.sm, marginTop: SPACING.sm, lineHeight: 19,
+    borderLeftWidth: 3, borderLeftColor: COLORS.accent,
+    borderRadius: RADIUS.sm, padding: SPACING.sm, marginTop: SPACING.md, lineHeight: 19,
+    fontWeight: '600',
   },
   // 表单
   formScroll: { flex: 1 },
