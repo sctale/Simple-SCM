@@ -147,7 +147,7 @@ export default function HomeScreen({ onGoSupplier, onGoCategory, onGoResearch }:
         {/* 统计概览 */}
         <View style={styles.statRow}>
           {stats.map((s) => (
-            <Pressable key={s.label} style={styles.statCard} onPress={s.onPress}>
+            <Pressable key={s.label} style={styles.statCard} onPress={s.onPress} accessibilityRole="button" accessibilityLabel={`${s.label} ${s.value}`}>
               <Text style={styles.statEmoji}>{s.emoji}</Text>
               <Text style={styles.statValue}>{s.value}</Text>
               <Text style={styles.statLabel}>{s.label}</Text>
@@ -187,7 +187,7 @@ export default function HomeScreen({ onGoSupplier, onGoCategory, onGoResearch }:
                   <Text style={styles.insightText}>{ins.content}</Text>
                   <Text style={styles.insightMeta}>{tag.label} · {relativeTime(ins.createdAt)}</Text>
                 </View>
-                <Pressable onPress={() => handleDeleteInsight(ins.id)} hitSlop={8}>
+                <Pressable onPress={() => handleDeleteInsight(ins.id)} hitSlop={10} accessibilityRole="button" accessibilityLabel="删除洞察">
                   <Text style={styles.deleteText}>✕</Text>
                 </Pressable>
               </View>
@@ -250,7 +250,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accent,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.lg,
+    minHeight: 44,
     paddingVertical: 8,
+    justifyContent: 'center',
   },
   quickSaveText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
   statRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },

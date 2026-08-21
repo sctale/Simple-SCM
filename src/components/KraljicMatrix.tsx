@@ -33,8 +33,9 @@ export default function KraljicMatrix({ categories, onSelect, selectedId }: Prop
   const toY = (impact: number) => BOX.bottom - ((impact - 1) / 4) * (BOX.bottom - BOX.top);
 
   return (
-    <View>
-      <Svg width="100%" height={300} viewBox="0 0 100 100">
+    // 等比容器：使 viewBox 正方形不被拉伸，落点/象限保持正圆
+    <View style={{ width: '100%', aspectRatio: 1 }}>
+      <Svg width="100%" height="100%" viewBox="0 0 100 100">
         {/* 四象限背景 */}
         {quads.map((qd) => {
           const def = getQuadrantDef(qd.q);

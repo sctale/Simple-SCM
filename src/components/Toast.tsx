@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, RADIUS } from '../constants';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function Toast({ toast, onHide, duration = 2000 }: Props) {
+  const insets = useSafeAreaInsets();
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,7 +46,7 @@ export default function Toast({ toast, onHide, duration = 2000 }: Props) {
   const bg = toast.type === 'error' ? '#EF5350' : toast.type === 'info' ? '#3F51B5' : '#26A69A';
 
   return (
-    <Animated.View pointerEvents="none" style={[styles.container, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View pointerEvents="none" style={[styles.container, { top: insets.top + 12, opacity, transform: [{ translateY }] }]}>
       <View style={[styles.bubble, { backgroundColor: bg }]}>
         <Text style={styles.text}>{toast.message}</Text>
       </View>
@@ -55,7 +57,6 @@ export default function Toast({ toast, onHide, duration = 2000 }: Props) {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: 64,
     left: 0,
     right: 0,
     alignItems: 'center',

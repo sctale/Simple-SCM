@@ -68,7 +68,15 @@ export default function Modal({ visible, title, onClose, children, height }: Pro
   );
 
   return (
-    <RNModal visible={visible} transparent animationType="none" onRequestClose={close}>
+    <RNModal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={close}
+      statusBarTranslucent
+      accessibilityViewIsModal
+      aria-modal={true}
+    >
       <View style={styles.overlay}>
         <Animated.View style={[styles.absFill, { opacity: backdropOpacity }]}>
           <Pressable style={styles.backdrop} onPress={close} />

@@ -49,6 +49,8 @@ export function AppButton({ title, onPress, disabled, style }: AppButtonProps) {
       style={[styles.appButton, disabled && styles.appButtonDisabled, style]}
       onPress={onPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={disabled ? { disabled: true } : undefined}
       android_ripple={{ color: 'rgba(255,255,255,0.15)' }}
     >
       <Text style={styles.appButtonText}>{title}</Text>
@@ -96,6 +98,7 @@ const styles = StyleSheet.create({
   },
   chip: {
     paddingHorizontal: SPACING.md,
+    minHeight: 44,          // 触摸目标达标（Android 建议 ≥48dp，折衷 44）
     paddingVertical: 6,
     borderRadius: RADIUS.pill,
     borderWidth: 1,
@@ -107,7 +110,8 @@ const styles = StyleSheet.create({
   appButton: {
     backgroundColor: COLORS.accent,
     borderRadius: RADIUS.lg,
-    paddingVertical: 13,
+    paddingVertical: 12,
+    minHeight: 48,          // 触摸目标达标
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: SPACING.md,

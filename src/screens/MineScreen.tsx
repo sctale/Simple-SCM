@@ -20,7 +20,7 @@ import Toast, { type ToastState } from '../components/Toast';
 import { AppButton, Card, FieldLabel, SectionHeader } from '../components/ui';
 import type { ActionItem, AiModel, Risk } from '../types';
 
-const APP_VERSION = '0.1.3';
+const APP_VERSION = '0.1.4';
 
 export default function MineScreen() {
   const [models, setModels] = useState<AiModel[]>([]);
@@ -258,7 +258,7 @@ export default function MineScreen() {
               <Pressable style={styles.modelBtn} onPress={() => { setKeyModal(m); setKeyText(''); }}>
                 <Text style={styles.modelBtnText}>Key</Text>
               </Pressable>
-              <Pressable onPress={() => handleDeleteModel(m)} hitSlop={8}>
+              <Pressable onPress={() => handleDeleteModel(m)} hitSlop={10}>
                 <Text style={styles.deleteText}>✕</Text>
               </Pressable>
             </View>
@@ -276,12 +276,17 @@ export default function MineScreen() {
           ) : (
             actions.map((a) => (
               <View key={a.id} style={styles.actionRow}>
-                <Pressable style={[styles.checkbox, a.done && styles.checkboxOn]} onPress={() => handleToggleAction(a)}>
+                <Pressable
+                  style={[styles.checkbox, a.done && styles.checkboxOn]}
+                  onPress={() => handleToggleAction(a)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: a.done }}
+                >
                   {a.done ? <Text style={styles.checkMark}>✓</Text> : null}
                 </Pressable>
                 <Text style={[styles.actionTitle, a.done && styles.actionTitleDone]} numberOfLines={1}>{a.title}</Text>
                 {a.owner ? <Text style={styles.actionOwner}>{a.owner}</Text> : null}
-                <Pressable onPress={() => handleDeleteAction(a)} hitSlop={8}>
+                <Pressable onPress={() => handleDeleteAction(a)} hitSlop={10}>
                   <Text style={styles.deleteText}>✕</Text>
                 </Pressable>
               </View>
@@ -310,13 +315,14 @@ export default function MineScreen() {
                     <Text style={styles.riskSub}>概率 {r.probability} × 影响 {r.impact}{r.strategy ? ` · ${r.strategy}` : ''}</Text>
                   </View>
                   <Pressable
-                    onPress={() => handleToggleRisk(r)}
-                  >
+                onPress={() => handleToggleRisk(r)}
+                hitSlop={10}
+              >
                     <Text style={[styles.riskStatus, r.status === 'closed' && { color: COLORS.income }]}>
                       {r.status === 'closed' ? '已关闭' : '处理中'}
                     </Text>
                   </Pressable>
-                  <Pressable onPress={() => handleDeleteRisk(r)} hitSlop={8}>
+                  <Pressable onPress={() => handleDeleteRisk(r)} hitSlop={10}>
                     <Text style={styles.deleteText}>✕</Text>
                   </Pressable>
                 </View>
@@ -365,6 +371,7 @@ export default function MineScreen() {
           autoCapitalize="none"
           secureTextEntry
           maxLength={200}
+          accessibilityLabel="API Key"
         />
         <Text style={styles.hint}>Key 使用系统安全存储加密，仅存本机</Text>
         <AppButton title="保存" onPress={handleSaveKey} />

@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   strategyText: { fontSize: FONT_SIZE.md, color: COLORS.text, lineHeight: 22 },
   detailActions: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md, marginBottom: SPACING.sm },
-  actionBtn: { flex: 1, borderRadius: RADIUS.md, paddingVertical: 10, alignItems: 'center' },
+  actionBtn: { flex: 1, minHeight: 44, borderRadius: RADIUS.md, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   actionBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: '#FFFFFF' },
   subRow: {
     backgroundColor: COLORS.surface, borderRadius: RADIUS.sm, borderWidth: 1, borderColor: COLORS.border,

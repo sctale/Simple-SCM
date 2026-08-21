@@ -10,7 +10,7 @@ export const COLORS = {
   surfaceAlt: '#F5F7FB',     // 冷调卡片底（商务感）
   text: '#2D2D2D',
   textSecondary: '#6E6E6E',
-  textTertiary: '#9E9E9E',
+  textTertiary: '#757575',    // 深色化，保证浅色背景对比度 ≥4.5:1（WCAG AA）
   border: '#ECECF0',
   borderSubtle: '#E3E3EA',
   accent: '#3F51B5',         // 深靛蓝（主色，专业可信）

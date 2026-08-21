@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   detailLabel: { width: 60, fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },
   detailValue: { flex: 1, fontSize: FONT_SIZE.sm, color: COLORS.text },
   detailActions: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
-  actionBtn: { flex: 1, borderRadius: RADIUS.md, paddingVertical: 10, alignItems: 'center' },
+  actionBtn: { flex: 1, minHeight: 44, borderRadius: RADIUS.md, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
   actionBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: '#FFFFFF' },
   detailSection: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.textSecondary, marginTop: SPACING.sm, marginBottom: SPACING.sm },
   subRow: {

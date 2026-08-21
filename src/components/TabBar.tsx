@@ -30,6 +30,9 @@ export default function TabBar({ current, onChange }: Props) {
               key={tab.key}
               style={[styles.item, active && styles.itemActive]}
               onPress={() => onChange(tab.key)}
+              accessibilityRole="tab"
+              accessibilityState={active ? { selected: true } : undefined}
+              accessibilityLabel={tab.label}
               android_ripple={{ color: 'rgba(63,81,181,0.08)', borderless: true }}
             >
               <View style={[styles.iconWrap, active && styles.iconWrapActive]}>

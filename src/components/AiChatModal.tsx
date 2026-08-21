@@ -226,7 +226,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.accentLight,
     borderRadius: RADIUS.pill,
     paddingHorizontal: SPACING.md,
+    minHeight: 44,
     paddingVertical: 8,
+    justifyContent: 'center',
   },
   quickChipText: {
     fontSize: FONT_SIZE.sm,

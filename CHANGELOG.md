@@ -1,5 +1,19 @@
 # 更新日志
 
+## [0.1.4] - 2026-08-21
+
+UI 全面检查 + Android 16 设计规范合规（修复 / 可达性）🔧
+
+### 修复
+- **Kraljic 矩阵拉伸变形**：`viewBox` 原本是正方形却被注入宽矩形（`width=100% / height=300`），导致品类落点圆形被水平拉成椭圆；改为等比容器渲染，落点恢复正圆、象限保持正方形
+- **Toast 顶部遮挡**：`top` 硬编码 `64`，未走安全区，刘海/挖孔屏可能被系统栏遮挡；改为基于 `useSafeAreaInsets().top`
+
+### 合规优化（Android 16 / Material 触摸与无障碍）
+- **触摸热区达标**：`Chip`、`AppButton`、评分单元格、详情操作按钮、AI 发送键等提升至 44–48dp，删除键/风险状态键补 `hitSlop`，符合 Android 触摸目标建议
+- **文本对比度达标**：`textTertiary` 令牌深色化（`#9E9E9E → #757575`），浅色背景辅助/占位文本达到 WCAG AA（≥4.5:1）
+- **无障碍语义**：`TabBar` 补 `tab` 角色与选中态、`Chip`/`AppButton` 补 `button` 角色、复选框补 `checkbox` 角色与勾选态、关键图形按钮（AI/统计/删除）补 `accessibilityLabel`、API Key 输入补标签；底部弹窗声明 `accessibilityViewIsModal` 模态 + `statusBarTranslucent` 适配 edge-to-edge
+- **edge-to-edge 收口**：随 Expo 56 系统强制边到边，各屏 `SafeAreaView`/`TabBar`/弹窗已正确使用安全区；系统栏图标由 `expo-status-bar` 深色化
+
 ## [0.1.3] - 2026-08-20
 
 UI 代码质量与视觉一致性优化 🎨
