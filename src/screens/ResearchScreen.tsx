@@ -112,13 +112,19 @@ export default function ResearchScreen() {
         </Pressable>
       </View>
 
-      {/* 类型筛选 */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-        <Chip label="全部" active={filter === 'all'} onPress={() => setFilter('all')} />
+      {/* 类型筛选（紧凑胶囊，自动换行，避免竖向长条） */}
+      <View style={styles.filterWrap}>
+        <Chip style={styles.compactChip} label="全部" active={filter === 'all'} onPress={() => setFilter('all')} />
         {RESEARCH_TYPES.map((t) => (
-          <Chip key={t.key} label={`${t.emoji} ${t.label}`} active={filter === t.key} onPress={() => setFilter(t.key)} />
+          <Chip
+            key={t.key}
+            style={styles.compactChip}
+            label={`${t.emoji} ${t.label}`}
+            active={filter === t.key}
+            onPress={() => setFilter(t.key)}
+          />
         ))}
-      </ScrollView>
+      </View>
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
@@ -309,7 +315,8 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.text },
   addBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.pill, paddingHorizontal: SPACING.md, paddingVertical: 10, minHeight: 44, justifyContent: 'center', ...SHADOW_PRIMARY },
   addBtnText: { color: '#FFFFFF', fontSize: FONT_SIZE.sm, fontWeight: '700' },
-  filterRow: { gap: SPACING.sm, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
+  filterWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm, paddingHorizontal: SPACING.lg, paddingVertical: SPACING.md },
+  compactChip: { minHeight: 38, paddingVertical: 5 },
   list: { flex: 1 },
   listContent: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.xxl },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },

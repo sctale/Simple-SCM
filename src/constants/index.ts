@@ -133,8 +133,11 @@ export function getResearchTypeDef(type: ResearchType) {
 }
 
 // ===== AI 内置模型模板 =====
+// 所有模板均为 OpenAI 兼容接口（POST {baseUrl}/chat/completions，Bearer 鉴权）
+// MiniMax：国内站用 api.minimax.chat（国际账号才用 api.minimaxi.com，国内不可达会导致报错）
 export const AI_MODEL_PRESETS: { name: string; baseUrl: string; model: string }[] = [
   { name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  { name: 'MiniMax', baseUrl: 'https://api.minimax.chat/v1', model: 'MiniMax-Text-01' },
   { name: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
   { name: '智谱 GLM', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
   { name: 'Kimi', baseUrl: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },

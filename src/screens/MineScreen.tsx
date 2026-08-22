@@ -6,31 +6,30 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONT_SIZE, RADIUS, SCM_EVENTS, SHADOW, SHADOW_PRIMARY, SPACING } from '../constants';
 import {
-  addActionItem, addAiModel, addRisk, deleteActionItem, deleteAiModel, deleteRisk,
-  getActionItems, getAiModels, getRisks, toggleActionItem, updateRiskStatus,
+  addActionItem, addRisk, deleteActionItem, deleteRisk,
+  getActionItems, getRisks, toggleActionItem, updateRiskStatus,
 } from '../database/scmDB';
-import { deleteModelKey, getModelKey, hasModelKey, saveModelKey } from '../utils/aiClient';
 import { exportAllData } from '../utils/exportData';
 import { pickAndImportData, type ImportStrategy } from '../utils/importData';
+import { pickAndImportCsv, SUPPLIER_CSV_COLUMNS, CATEGORY_CSV_COLUMNS } from '../utils/importCsv';
 import { getToday } from '../utils/dateUtils';
 import { hapticError, hapticLight, hapticSuccess } from '../utils/haptics';
 import Modal from '../components/Modal';
 import AiChatModal from '../components/AiChatModal';
 import Toast, { type ToastState } from '../components/Toast';
 import { AppButton, Card, FieldLabel, SectionHeader } from '../components/ui';
-import type { ActionItem, AiModel, Risk } from '../types';
+import type { ActionItem, Risk } from '../types';
 
-const APP_VERSION = '0.1.5';
+const APP_VERSION = '0.1.6';
 
-export default function MineScreen() {
-  const [models, setModels] = useState<AiModel[]>([]);
-  const [modelKeys, setModelKeys] = useState<Record<number, boolean>>({});
+interface Props {
+  onOpenAiSettings: () => void;
+}
+
+export default function MineScreen({ onOpenAiSettings }: Props) {
   const [risks, setRisks] = useState<Risk[]>([]);
   const [actions, setActions] = useState<ActionItem[]>([]);
 
-  const [keyModal, setKeyModal] = useState<AiModel | null>(null);
-  const [keyText, setKeyText] = useState('');
-  const [customModal, setCustomModal] = useState(false);
   const [riskModal, setRiskModal] = useState(false);
   const [actionModal, setActionModal] = useState(false);
   const [aiVisible, setAiVisible] = useState(false);
@@ -39,15 +38,9 @@ export default function MineScreen() {
 
   const reload = useCallback(async () => {
     try {
-      const [ms, rs, acts] = await Promise.all([getAiModels(), getRisks(), getActionItems()]);
-      setModels(ms);
+      const [rs, acts] = await Promise.all([getRisks(), getActionItems()]);
       setRisks(rs);
       setActions(acts);
-      const keyMap: Record<number, boolean> = {};
-      for (const m of ms) {
-        keyMap[m.id] = await hasModelKey(m.id);
-      }
-      setModelKeys(keyMap);
     } catch {
       // 静默
     }
@@ -62,49 +55,6 @@ export default function MineScreen() {
   const showToast = useCallback((message: string, type: ToastState['type'] = 'success') => {
     setToast({ visible: true, message, type });
   }, []);
-
-  // ===== AI 模型 =====
-  const handleSaveKey = useCallback(async () => {
-    if (!keyModal) return;
-    await saveModelKey(keyModal.id, keyText.trim());
-    hapticSuccess();
-    showToast(`已保存 ${keyModal.name} 的 Key`);
-    setKeyModal(null);
-    setKeyText('');
-    reload();
-  }, [keyModal, keyText, showToast, reload]);
-
-  const handleDeleteModel = useCallback((m: AiModel) => {
-    Alert.alert('删除模型', `确定删除「${m.name}」？`, [
-      { text: '取消', style: 'cancel' },
-      {
-        text: '删除', style: 'destructive',
-        onPress: async () => {
-          await deleteAiModel(m.id);
-          await deleteModelKey(m.id);
-          hapticLight();
-          reload();
-        },
-      },
-    ]);
-  }, [reload]);
-
-  const handleAddCustom = useCallback(async (name: string, baseUrl: string, model: string) => {
-    if (!name.trim() || !baseUrl.trim() || !model.trim()) {
-      hapticError();
-      showToast('请填写完整', 'error');
-      return;
-    }
-    try {
-      await addAiModel({ name: name.trim(), baseUrl: baseUrl.trim(), model: model.trim(), isBuiltin: false, temperature: 0.7 });
-      hapticSuccess();
-      showToast('模型已添加');
-      setCustomModal(false);
-      reload();
-    } catch {
-      hapticError();
-    }
-  }, [showToast, reload]);
 
   // ===== 风险 =====
   const handleAddRisk = useCallback(async (r: { title: string; probability: number; impact: number; strategy: string }) => {
@@ -232,6 +182,20 @@ export default function MineScreen() {
     }
   }, [showToast, reload]);
 
+  // ===== CSV 导入（供应商 / 品类）=====
+  const doImportCsv = useCallback(async (kind: 'supplier' | 'category') => {
+    const r = await pickAndImportCsv(kind);
+    if (r.cancelled) return;
+    if (r.success) {
+      hapticSuccess();
+      showToast(`已导入 ${r.imported ?? 0} 条${kind === 'supplier' ? '供应商' : '品类'}${(r.skipped ?? 0) > 0 ? `，跳过 ${r.skipped} 条重复/空行` : ''}`);
+      DeviceEventEmitter.emit(SCM_EVENTS.DATA_IMPORTED);
+    } else {
+      hapticError();
+      showToast(r.error ?? '导入失败', 'error');
+    }
+  }, [showToast]);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar style="dark" />
@@ -244,27 +208,9 @@ export default function MineScreen() {
           <Pressable style={styles.aiAssistantBtn} onPress={() => setAiVisible(true)}>
             <Text style={styles.aiAssistantText}>💬 打开 AI 助手</Text>
           </Pressable>
-          {models.map((m) => (
-            <View key={m.id} style={styles.modelRow}>
-              <View style={styles.modelInfo}>
-                <Text style={styles.modelName}>{m.name}</Text>
-                <Text style={styles.modelSub} numberOfLines={1}>{m.model}</Text>
-              </View>
-              <View style={[styles.keyBadge, modelKeys[m.id] ? styles.keyBadgeOn : styles.keyBadgeOff]}>
-                <Text style={[styles.keyBadgeText, modelKeys[m.id] && styles.keyBadgeTextOn]}>
-                  {modelKeys[m.id] ? '已配置' : '未配置'}
-                </Text>
-              </View>
-              <Pressable style={styles.modelBtn} onPress={() => { setKeyModal(m); setKeyText(''); }}>
-                <Text style={styles.modelBtnText}>Key</Text>
-              </Pressable>
-              <Pressable onPress={() => handleDeleteModel(m)} hitSlop={10}>
-                <Text style={styles.deleteText}>✕</Text>
-              </Pressable>
-            </View>
-          ))}
-          <Pressable style={styles.addLink} onPress={() => setCustomModal(true)}>
-            <Text style={styles.addLinkText}>＋ 添加自定义模型</Text>
+          <Pressable style={styles.entryRow} onPress={onOpenAiSettings}>
+            <Text style={styles.entryText}>管理模型与 API Key</Text>
+            <Text style={styles.entryArrow}>›</Text>
           </Pressable>
         </Card>
 
@@ -335,7 +281,7 @@ export default function MineScreen() {
         </Card>
 
         {/* 数据备份 */}
-        <SectionHeader icon="💾" title="数据备份" />
+        <SectionHeader icon="💾" title="数据管理" />
         <Card>
           <View style={styles.btnRow}>
             <Pressable style={[styles.backupBtn, { backgroundColor: COLORS.accent }]} onPress={handleExport}>
@@ -345,7 +291,22 @@ export default function MineScreen() {
               <Text style={[styles.backupBtnText, { color: COLORS.text }]}>导入数据</Text>
             </Pressable>
           </View>
-          <Text style={styles.hint}>数据完全保存在本地，可导出 JSON 备份或跨设备导入</Text>
+
+          <View style={styles.csvBlock}>
+            <Text style={styles.csvLabel}>CSV 导入</Text>
+            <View style={styles.btnRow}>
+              <Pressable style={styles.csvBtn} onPress={() => doImportCsv('supplier')}>
+                <Text style={styles.csvBtnText}>📤 导入供应商</Text>
+              </Pressable>
+              <Pressable style={styles.csvBtn} onPress={() => doImportCsv('category')}>
+                <Text style={styles.csvBtnText}>📤 导入品类</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.hint}>供应商表头：{SUPPLIER_CSV_COLUMNS.join('、')}</Text>
+            <Text style={styles.hint}>品类表头：{CATEGORY_CSV_COLUMNS.join('、')}</Text>
+          </View>
+
+          <Text style={styles.hint}>数据完全保存在本地，可导出 JSON 备份或跨设备导入；CSV 用于批量录入供应商/品类</Text>
         </Card>
 
         {/* 关于 */}
@@ -359,26 +320,6 @@ export default function MineScreen() {
         </Card>
       </ScrollView>
 
-      {/* 配置 Key 弹窗 */}
-      <Modal visible={!!keyModal} title={keyModal ? `配置 ${keyModal.name} API Key` : ''} onClose={() => setKeyModal(null)}>
-        <FieldLabel>API Key</FieldLabel>
-        <TextInput
-          style={styles.fieldInput}
-          placeholder="粘贴 API Key"
-          placeholderTextColor={COLORS.textTertiary}
-          value={keyText}
-          onChangeText={setKeyText}
-          autoCapitalize="none"
-          secureTextEntry
-          maxLength={200}
-          accessibilityLabel="API Key"
-        />
-        <Text style={styles.hint}>Key 使用系统安全存储加密，仅存本机</Text>
-        <AppButton title="保存" onPress={handleSaveKey} />
-      </Modal>
-
-      {/* 自定义模型弹窗 */}
-      <CustomModelModal visible={customModal} onClose={() => setCustomModal(false)} onSave={handleAddCustom} />
       {/* 风险弹窗 */}
       <RiskModal visible={riskModal} onClose={() => setRiskModal(false)} onSave={handleAddRisk} />
       {/* 行动项弹窗 */}
@@ -387,26 +328,6 @@ export default function MineScreen() {
       <AiChatModal visible={aiVisible} onClose={() => setAiVisible(false)} />
       <Toast toast={toast} onHide={() => setToast((p) => ({ ...p, visible: false }))} />
     </SafeAreaView>
-  );
-}
-
-function CustomModelModal({ visible, onClose, onSave }: {
-  visible: boolean; onClose: () => void; onSave: (name: string, baseUrl: string, model: string) => void;
-}) {
-  const [name, setName] = useState('');
-  const [baseUrl, setBaseUrl] = useState('');
-  const [model, setModel] = useState('');
-  useEffect(() => { if (visible) { setName(''); setBaseUrl(''); setModel(''); } }, [visible]);
-  return (
-    <Modal visible={visible} title="添加自定义模型" onClose={onClose}>
-      <FieldLabel>显示名称</FieldLabel>
-      <TextInput style={styles.fieldInput} placeholder="如 我的模型" placeholderTextColor={COLORS.textTertiary} value={name} onChangeText={setName} maxLength={20} />
-      <FieldLabel>API Base URL</FieldLabel>
-      <TextInput style={styles.fieldInput} placeholder="https://api.xxx.com/v1" placeholderTextColor={COLORS.textTertiary} value={baseUrl} onChangeText={setBaseUrl} autoCapitalize="none" maxLength={100} />
-      <FieldLabel>模型标识</FieldLabel>
-      <TextInput style={styles.fieldInput} placeholder="如 deepseek-chat" placeholderTextColor={COLORS.textTertiary} value={model} onChangeText={setModel} autoCapitalize="none" maxLength={50} />
-      <AppButton title="添加" onPress={() => onSave(name, baseUrl, model)} />
-    </Modal>
   );
 }
 
@@ -472,20 +393,12 @@ const styles = StyleSheet.create({
   pageTitle: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.sm },
   aiAssistantBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center', marginBottom: SPACING.xs, ...SHADOW_PRIMARY },
   aiAssistantText: { color: '#FFFFFF', fontSize: FONT_SIZE.md, fontWeight: '700' },
-  modelRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  modelInfo: { flex: 1 },
-  modelName: { fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: '600' },
-  modelSub: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, marginTop: 1 },
-  keyBadge: { borderRadius: RADIUS.pill, paddingHorizontal: 8, paddingVertical: 2 },
-  keyBadgeOn: { backgroundColor: '#E8F5E9' },
-  keyBadgeOff: { backgroundColor: COLORS.bgAlt },
-  keyBadgeText: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, fontWeight: '600' },
-  keyBadgeTextOn: { color: '#2E7D32' },
-  modelBtn: { backgroundColor: COLORS.accentLight, borderRadius: RADIUS.sm, paddingHorizontal: 10, paddingVertical: 5 },
-  modelBtnText: { fontSize: FONT_SIZE.xs, color: COLORS.accentDark, fontWeight: '700' },
-  deleteText: { fontSize: 13, color: COLORS.textTertiary, padding: 4 },
-  addLink: { paddingVertical: 6 },
-  addLinkText: { fontSize: FONT_SIZE.sm, color: COLORS.accent, fontWeight: '600' },
+  entryRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 10, marginTop: SPACING.xs, borderTopWidth: 1, borderTopColor: COLORS.border,
+  },
+  entryText: { fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: '500' },
+  entryArrow: { fontSize: FONT_SIZE.xl, color: COLORS.textTertiary },
   emptyText: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary, paddingVertical: SPACING.xs },
   actionRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   checkbox: {
@@ -508,6 +421,16 @@ const styles = StyleSheet.create({
   backupBtn: { flex: 1, borderRadius: RADIUS.md, paddingVertical: 12, alignItems: 'center' },
   backupBtnText: { fontSize: FONT_SIZE.md, fontWeight: '700', color: '#FFFFFF' },
   hint: { fontSize: FONT_SIZE.xs, color: COLORS.textTertiary, lineHeight: 17 },
+  csvBlock: { marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: COLORS.border },
+  csvLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontWeight: '600', marginBottom: SPACING.sm },
+  csvBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: COLORS.accentLight, borderRadius: RADIUS.md, paddingVertical: 11, gap: 4,
+  },
+  csvBtnText: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.accentDark },
+  addLink: { paddingVertical: 6 },
+  addLinkText: { fontSize: FONT_SIZE.sm, color: COLORS.accent, fontWeight: '600' },
+  deleteText: { fontSize: 13, color: COLORS.textTertiary, padding: 4 },
   aboutRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   aboutName: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
   aboutVersion: { fontSize: FONT_SIZE.sm, color: COLORS.textTertiary },

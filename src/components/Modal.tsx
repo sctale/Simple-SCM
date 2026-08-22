@@ -1,146 +1,90 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import {
-  Animated, Modal as RNModal, PanResponder, Pressable, StyleSheet, Text, useWindowDimensions, View,
-} from 'react-native';
+import React from 'react';
+import { Modal as RNModal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, RADIUS, SPACING } from '../constants';
+import { COLORS, FONT_SIZE, RADIUS, SPACING } from '../constants';
 
 interface Props {
   visible: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  /** 兼容旧调用：全屏模式下忽略固定高度 */
   height?: number;
 }
 
-// 通用底部弹窗（下滑关闭 + 淡入淡出 + 安全区自适应 + 内容可控）
-export default function Modal({ visible, title, onClose, children, height }: Props) {
-  const translateY = useRef(new Animated.Value(600)).current;
-  const backdropOpacity = useRef(new Animated.Value(0)).current;
-  const { height: winHeight } = useWindowDimensions();
+// 通用全屏弹窗页（顶部 ‹ 返回 + 标题栏 + 内容区）
+// 统一所有弹出页面为全屏，符合 Android 16 沉浸式交互
+export default function Modal({ visible, title, onClose, children }: Props) {
   const insets = useSafeAreaInsets();
-
-  // 高度统一上限 85%，避免小屏/键盘弹出时溢出
-  const maxSheetHeight = winHeight * 0.85;
-  // 显式指定高度时用固定高度；否则交给内容自适应（仅约束上限）
-  const sheetHeight = height != null ? Math.min(height, maxSheetHeight) : undefined;
-  const sheetPaddingBottom = Math.max(SPACING.xxl, insets.bottom + SPACING.md);
-
-  useEffect(() => {
-    if (visible) {
-      translateY.setValue(600);
-      backdropOpacity.setValue(0);
-      Animated.parallel([
-        Animated.timing(backdropOpacity, { toValue: 1, duration: 180, useNativeDriver: true }),
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 9, tension: 72 }),
-      ]).start();
-    }
-  }, [visible, translateY, backdropOpacity]);
-
-  const close = useCallback(() => {
-    Animated.parallel([
-      Animated.timing(backdropOpacity, { toValue: 0, duration: 160, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 620, duration: 200, useNativeDriver: true }),
-    ]).start(({ finished }) => {
-      if (finished) onClose();
-    });
-  }, [onClose, translateY, backdropOpacity]);
-
-  const springBack = useCallback(() => {
-    Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 9, tension: 72 }).start();
-  }, [translateY]);
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: (_, g) => g.dy > 4 && Math.abs(g.dy) > Math.abs(g.dx),
-        onPanResponderMove: (_, g) => {
-          if (g.dy > 0) translateY.setValue(g.dy);
-        },
-        onPanResponderRelease: (_, g) => {
-          if (g.dy > 110 || g.vy > 0.8) close();
-          else springBack();
-        },
-        onPanResponderTerminate: springBack,
-      }),
-    [translateY, close, springBack]
-  );
 
   return (
     <RNModal
       visible={visible}
-      transparent
-      animationType="none"
-      onRequestClose={close}
+      animationType="slide"
+      onRequestClose={onClose}
       statusBarTranslucent
+      hardwareAccelerated
       accessibilityViewIsModal
       aria-modal={true}
     >
-      <View style={styles.overlay}>
-        <Animated.View style={[styles.absFill, { opacity: backdropOpacity }]}>
-          <Pressable style={styles.backdrop} onPress={close} />
-        </Animated.View>
-        <Animated.View
-          style={[
-            styles.sheet,
-            sheetHeight != null
-              ? { height: sheetHeight }
-              : { maxHeight: maxSheetHeight },
-            { paddingBottom: sheetPaddingBottom, transform: [{ translateY }] },
-          ]}
-        >
-          <View style={styles.handleArea} {...panResponder.panHandlers}>
-            <View style={styles.handle} />
-          </View>
-          <Text style={styles.title}>{title}</Text>
-          {children}
-        </Animated.View>
+      <View style={styles.screen}>
+        {/* 顶部导航栏 */}
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <Pressable
+            style={styles.headerBtn}
+            onPress={onClose}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="关闭"
+          >
+            <Text style={styles.closeIcon}>‹</Text>
+          </Pressable>
+          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          {/* 右侧占位，保证标题居中 */}
+          <View style={styles.headerBtn} />
+        </View>
+
+        {/* 内容区 */}
+        <View style={styles.body}>{children}</View>
       </View>
     </RNModal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  screen: {
     flex: 1,
-    justifyContent: 'flex-end',
-  },
-  absFill: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(30,30,40,0.4)',
-  },
-  sheet: {
     backgroundColor: COLORS.background,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg,
   },
-  handleArea: {
-    alignSelf: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    marginTop: -10,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.background,
   },
-  handle: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.borderSubtle,
-    marginBottom: SPACING.xs,
+  headerBtn: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeIcon: {
+    fontSize: 30,
+    lineHeight: 32,
+    color: COLORS.text,
   },
   title: {
-    fontSize: 18,
+    flex: 1,
+    textAlign: 'center',
+    fontSize: FONT_SIZE.lg,
     fontWeight: '800',
     color: COLORS.text,
-    marginBottom: SPACING.md,
+    marginHorizontal: SPACING.xs,
+  },
+  body: {
+    flex: 1,
   },
 });
