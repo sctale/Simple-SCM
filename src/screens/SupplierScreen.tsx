@@ -308,12 +308,17 @@ function SupplierDetailModal({ supplier, categoryName, onClose, onEdit, onDelete
   useEffect(() => {
     if (!supplier) return;
     (async () => {
-      const [ins, res] = await Promise.all([
-        getInsights('supplier', supplier.id),
-        getResearchEntries(supplier.id),
-      ]);
-      setInsights(ins);
-      setResearch(res);
+      try {
+        const [ins, res] = await Promise.all([
+          getInsights('supplier', supplier.id),
+          getResearchEntries(supplier.id),
+        ]);
+        setInsights(ins);
+        setResearch(res);
+      } catch {
+        setInsights([]);
+        setResearch([]);
+      }
     })();
   }, [supplier]);
 

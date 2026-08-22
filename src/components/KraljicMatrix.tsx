@@ -20,12 +20,12 @@ export default function KraljicMatrix({ categories, onSelect, selectedId }: Prop
   const midX = BOX.left + qw;
   const midY = BOX.top + qh;
 
-  // 四象限背景（左上 bottleneck, 右上 strategic, 左下 routine, 右下 leverage）
+  // 四象限背景（左上 leverage, 右上 strategic, 左下 routine, 右下 bottleneck）
   const quads = [
-    { x: BOX.left, y: BOX.top, q: 'bottleneck' as const },
+    { x: BOX.left, y: BOX.top, q: 'leverage' as const },
     { x: midX, y: BOX.top, q: 'strategic' as const },
     { x: BOX.left, y: midY, q: 'routine' as const },
-    { x: midX, y: midY, q: 'leverage' as const },
+    { x: midX, y: midY, q: 'bottleneck' as const },
   ];
 
   // 风险 1-5 → x[left~right]；影响 1-5 → y[bottom~top]（影响大在上）
@@ -81,7 +81,15 @@ export default function KraljicMatrix({ categories, onSelect, selectedId }: Prop
           return (
             <React.Fragment key={c.id}>
               {/* 透明触摸热区（加大点击区域） */}
-              <Circle cx={cx} cy={cy} r={11} fill="transparent" onPress={() => onSelect?.(c)} />
+              <Circle
+                cx={cx}
+                cy={cy}
+                r={11}
+                fill="transparent"
+                accessible
+                accessibilityLabel={`${c.name}，${def.label}`}
+                onPress={() => onSelect?.(c)}
+              />
               {/* 可见落点 */}
               <Circle cx={cx} cy={cy} r={isSel ? 4.5 : 3.5} fill={def.color} stroke="#fff" strokeWidth={1.2} />
             </React.Fragment>

@@ -88,6 +88,11 @@ export default function MineScreen({ onOpenAiSettings }: Props) {
       showToast('请输入任务', 'error');
       return;
     }
+    if (a.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(a.dueDate)) {
+      hapticError();
+      showToast('截止日期格式应为 YYYY-MM-DD', 'error');
+      return;
+    }
     try {
       await addActionItem(a);
       hapticSuccess();
@@ -100,10 +105,16 @@ export default function MineScreen({ onOpenAiSettings }: Props) {
   }, [showToast, reload]);
 
   const handleToggleAction = useCallback(async (a: ActionItem) => {
-    await toggleActionItem(a.id, !a.done);
-    hapticLight();
-    reload();
-  }, [reload]);
+    try {
+      await toggleActionItem(a.id, !a.done);
+      hapticLight();
+      reload();
+    } catch {
+      hapticError();
+      showToast('操作失败', 'error');
+      reload();
+    }
+  }, [reload, showToast]);
 
   const handleDeleteAction = useCallback((a: ActionItem) => {
     Alert.alert('删除行动项', `确定删除「${a.title}」？`, [

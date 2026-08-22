@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, BackHandler } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { COLORS } from './src/constants';
 import { initDatabase } from './src/database/scmDB';
@@ -28,6 +28,18 @@ export default function App() {
       setDbReady(true);
     })();
   }, []);
+
+  // Android 返回键：子页面时返回主界面，而不是退出应用
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (subPage !== null) {
+        setSubPage(null);
+        return true;
+      }
+      return false;
+    });
+    return () => subscription.remove();
+  }, [subPage]);
 
   if (!dbReady) {
     return (

@@ -32,31 +32,15 @@ export default function AiChatModal({ visible, onClose, initialPrompt }: Props) 
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
-  useEffect(() => {
-    if (!visible) return;
-    (async () => {
-      const list = await getAiModels();
-      setModels(list);
-      if (list.length > 0) setModelId((prev) => (prev && list.some((m) => m.id === prev) ? prev : list[0].id));
-      if (initialPrompt) {
-        setMessages([]);
-        setInput(initialPrompt);
-      } else {
-        setMessages([]);
-        setInput('');
-      }
-      setError(null);
-    })();
-  }, [visible, initialPrompt]);
-
-  const send = useCallback(async (text?: string) => {
+  const send = useCallback(async (text?: string, overrideModelId?: number, historyOverride?: AiMessage[]) => {
     const content = (text ?? input).trim();
     if (!content) return;
-    if (modelId == null) {
+    const effectiveModelId = overrideModelId ?? modelId;
+    if (effectiveModelId == null) {
       setError('请先在「我的」页配置 AI 模型');
       return;
     }
-    if (!(await hasModelKey(modelId))) {
+    if (!(await hasModelKey(effectiveModelId))) {
       setError('该模型尚未配置 API Key，请到「我的 → AI 模型」填写');
       return;
     }
@@ -64,27 +48,46 @@ export default function AiChatModal({ visible, onClose, initialPrompt }: Props) 
     setError(null);
     setLoading(true);
     const userMsg: AiMessage = { role: 'user', content };
-    const next = [...messages, userMsg];
-    setMessages(next);
+    const history = [...(historyOverride ?? messages), userMsg];
+    setMessages((prev) => [...prev, userMsg]);
     try {
-      const reply = await askModel(modelId, content);
-      setMessages([...next, { role: 'assistant', content: reply }]);
+      const reply = await askModel(effectiveModelId, history);
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply }]);
     } catch (e) {
-      setMessages([...next, { role: 'assistant', content: `⚠️ 请求失败：${(e as Error).message}` }]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: `⚠️ 请求失败：${(e as Error).message}` }]);
     } finally {
       setLoading(false);
     }
   }, [input, modelId, messages]);
 
-  // 初始提示自动发送一次
+  // 打开时加载模型并重置会话；带初始提示且模型可用时，加载完成后自动发送一次（每次打开至多一次）
   const autoSent = useRef(false);
   useEffect(() => {
-    if (visible && initialPrompt && !autoSent.current) {
-      autoSent.current = true;
-      send(initialPrompt);
+    if (!visible) {
+      autoSent.current = false;
+      return;
     }
-    if (!visible) autoSent.current = false;
-  }, [visible, initialPrompt, send]);
+    (async () => {
+      const list = await getAiModels();
+      setModels(list);
+      let nextModelId: number | null = null;
+      if (list.length > 0) {
+        nextModelId = modelId != null && list.some((m) => m.id === modelId) ? modelId : list[0].id;
+        setModelId(nextModelId);
+      } else {
+        setModelId(null);
+      }
+      setMessages([]);
+      setInput(initialPrompt ?? '');
+      setError(null);
+      // 会话重置完成后再自动发送，避免 modelId 未就绪导致发送失败
+      if (initialPrompt && nextModelId != null && !autoSent.current) {
+        autoSent.current = true;
+        send(initialPrompt, nextModelId, []);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, initialPrompt]);
 
   return (
     <Modal visible={visible} title="AI 智能助手" onClose={onClose} height={620}>

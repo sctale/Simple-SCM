@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File } from 'expo-file-system';
 import { DeviceEventEmitter } from 'react-native';
 import { parseCsv } from './csv';
-import { addCategory, addSupplier, getCategories, getSuppliers } from '../database/scmDB';
+import { addCategory, addSupplier, getCategories, getSuppliers, runInTransaction } from '../database/scmDB';
 import { SCM_EVENTS } from '../constants';
 import type { SupplierGrade, SupplierStatus } from '../types';
 
@@ -34,11 +34,14 @@ const STATUS_MAP: Record<string, SupplierStatus> = {
 
 function clamp01to5(n: number): number {
   if (Number.isNaN(n)) return 1;
-  return Math.max(1, Math.min(5, Math.round(n)));
+  return Math.max(1, Math.min(5, Math.floor(n)));
 }
 
 function findColIndexByKeyword(header: string[], keywords: string[]): number {
-  return header.findIndex((h) => keywords.some((k) => h.includes(k)));
+  return header.findIndex((h) => {
+    const lc = h.toLowerCase();
+    return keywords.some((k) => lc.includes(k));
+  });
 }
 
 export const SUPPLIER_CSV_COLUMNS = ['名称', '编码', '品类', '分级', '状态', '联系人', '电话', '邮箱', '备注'];
@@ -72,43 +75,45 @@ export async function importSuppliersCsv(text: string): Promise<CsvImportResult>
     let skipped = 0;
     const getCell = (row: string[], idx: number) => (idx >= 0 ? (row[idx] ?? '').trim() : '');
 
-    for (const row of rows.slice(1)) {
-      const name = getCell(row, iName);
-      if (!name) { skipped++; continue; }
-      if (existingNames.has(name)) { skipped++; continue; }
+    await runInTransaction(async () => {
+      for (const row of rows.slice(1)) {
+        const name = getCell(row, iName);
+        if (!name) { skipped++; continue; }
+        if (existingNames.has(name)) { skipped++; continue; }
 
-      // 解析品类：按名称匹配，不存在则自动创建
-      let categoryId: number | null = null;
-      const catName = getCell(row, iCat);
-      if (catName) {
-        if (catByName.has(catName)) {
-          categoryId = catByName.get(catName)!;
-        } else {
-          const created = await addCategory({
-            name: catName, parentId: null, kraljicX: 1, kraljicY: 1, strategy: '', note: '由供应商 CSV 导入自动创建',
-          });
-          catByName.set(catName, created.id);
-          categoryId = created.id;
+        // 解析品类：按名称匹配，不存在则自动创建
+        let categoryId: number | null = null;
+        const catName = getCell(row, iCat);
+        if (catName) {
+          if (catByName.has(catName)) {
+            categoryId = catByName.get(catName)!;
+          } else {
+            const created = await addCategory({
+              name: catName, parentId: null, kraljicX: 1, kraljicY: 1, strategy: '', note: '由供应商 CSV 导入自动创建',
+            });
+            catByName.set(catName, created.id);
+            categoryId = created.id;
+          }
         }
+
+        const grade = GRADE_MAP[getCell(row, iGrade).toLowerCase()] ?? GRADE_MAP[getCell(row, iGrade)] ?? 'qualified';
+        const status = STATUS_MAP[getCell(row, iStatus).toLowerCase()] ?? STATUS_MAP[getCell(row, iStatus)] ?? 'potential';
+
+        await addSupplier({
+          name,
+          code: getCell(row, iCode),
+          categoryId,
+          grade,
+          status,
+          contact: getCell(row, iContact),
+          phone: getCell(row, iPhone),
+          email: getCell(row, iEmail),
+          note: getCell(row, iNote),
+        });
+        existingNames.add(name);
+        imported++;
       }
-
-      const grade = GRADE_MAP[getCell(row, iGrade).toLowerCase()] ?? GRADE_MAP[getCell(row, iGrade)] ?? 'qualified';
-      const status = STATUS_MAP[getCell(row, iStatus).toLowerCase()] ?? STATUS_MAP[getCell(row, iStatus)] ?? 'potential';
-
-      await addSupplier({
-        name,
-        code: getCell(row, iCode),
-        categoryId,
-        grade,
-        status,
-        contact: getCell(row, iContact),
-        phone: getCell(row, iPhone),
-        email: getCell(row, iEmail),
-        note: getCell(row, iNote),
-      });
-      existingNames.add(name);
-      imported++;
-    }
+    });
 
     DeviceEventEmitter.emit(SCM_EVENTS.DATA_IMPORTED);
     return { success: true, total: rows.length - 1, imported, skipped };
@@ -139,22 +144,24 @@ export async function importCategoriesCsv(text: string): Promise<CsvImportResult
     let skipped = 0;
     const getCell = (row: string[], idx: number) => (idx >= 0 ? (row[idx] ?? '').trim() : '');
 
-    for (const row of rows.slice(1)) {
-      const name = getCell(row, iName);
-      if (!name) { skipped++; continue; }
-      if (existingNames.has(name)) { skipped++; continue; }
+    await runInTransaction(async () => {
+      for (const row of rows.slice(1)) {
+        const name = getCell(row, iName);
+        if (!name) { skipped++; continue; }
+        if (existingNames.has(name)) { skipped++; continue; }
 
-      await addCategory({
-        name,
-        parentId: null,
-        kraljicX: clamp01to5(parseInt(getCell(row, iX).replace(/[^\d]/g, ''), 10)),
-        kraljicY: clamp01to5(parseInt(getCell(row, iY).replace(/[^\d]/g, ''), 10)),
-        strategy: getCell(row, iStrategy),
-        note: getCell(row, iNote),
-      });
-      existingNames.add(name);
-      imported++;
-    }
+        await addCategory({
+          name,
+          parentId: null,
+          kraljicX: clamp01to5(parseFloat(getCell(row, iX))),
+          kraljicY: clamp01to5(parseFloat(getCell(row, iY))),
+          strategy: getCell(row, iStrategy),
+          note: getCell(row, iNote),
+        });
+        existingNames.add(name);
+        imported++;
+      }
+    });
 
     DeviceEventEmitter.emit(SCM_EVENTS.DATA_IMPORTED);
     return { success: true, total: rows.length - 1, imported, skipped };

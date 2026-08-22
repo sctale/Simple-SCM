@@ -45,7 +45,7 @@ export default function Modal({ visible, title, onClose, children }: Props) {
         </View>
 
         {/* 内容区 */}
-        <View style={styles.body}>{children}</View>
+        <View style={[styles.body, { paddingBottom: insets.bottom }]}>{children}</View>
       </View>
     </RNModal>
   );

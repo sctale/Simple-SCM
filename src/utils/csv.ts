@@ -32,7 +32,7 @@ export function parseCsv(text: string): string[][] {
       } else {
         field += ch;
       }
-    } else if (ch === '"') {
+    } else if (ch === '"' && field === '') {
       inQuotes = true;
     } else if (ch === ',') {
       endField();

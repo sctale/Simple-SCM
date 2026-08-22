@@ -55,10 +55,6 @@ export async function pickAndImportData(strategy: ImportStrategy): Promise<Impor
     return { success: false, cancelled: true };
   }
   const asset = pickResult.assets[0];
-  const fileName = asset.name || '';
-  if (!fileName.toLowerCase().endsWith('.json')) {
-    return { success: false, error: '请选择 JSON 文件' };
-  }
   let text: string;
   try {
     const file = new File(asset.uri);

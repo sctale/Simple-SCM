@@ -28,7 +28,10 @@ export function relativeTime(ts: number): string {
   if (diff < min) return '刚刚';
   if (diff < hour) return `${Math.floor(diff / min)} 分钟前`;
   if (diff < day) return `${Math.floor(diff / hour)} 小时前`;
-  if (diff < 2 * day) return '昨天';
+  // 昨天/前天按日历日判断：记录日期 == (now - 24h/48h) 的日期
+  const tsDate = formatDate(new Date(ts));
+  if (tsDate === formatDate(new Date(now - day))) return '昨天';
+  if (tsDate === formatDate(new Date(now - 2 * day))) return '前天';
   if (diff < 30 * day) return `${Math.floor(diff / day)} 天前`;
   return formatDate(new Date(ts));
 }

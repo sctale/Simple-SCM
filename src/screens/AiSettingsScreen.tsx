@@ -52,12 +52,22 @@ export default function AiSettingsScreen({ onBack }: Props) {
 
   const handleSaveKey = useCallback(async () => {
     if (!keyModal) return;
-    await saveModelKey(keyModal.id, keyText.trim());
-    hapticSuccess();
-    showToast(`已保存 ${keyModal.name} 的 Key`);
-    setKeyModal(null);
-    setKeyText('');
-    reload();
+    if (!keyText.trim()) {
+      hapticError();
+      showToast('API Key 不能为空', 'error');
+      return;
+    }
+    try {
+      await saveModelKey(keyModal.id, keyText.trim());
+      hapticSuccess();
+      showToast(`已保存 ${keyModal.name} 的 Key`);
+      setKeyModal(null);
+      setKeyText('');
+      reload();
+    } catch {
+      hapticError();
+      showToast('保存失败', 'error');
+    }
   }, [keyModal, keyText, showToast, reload]);
 
   const handleDeleteModel = useCallback((m: AiModel) => {
@@ -66,14 +76,19 @@ export default function AiSettingsScreen({ onBack }: Props) {
       {
         text: '删除', style: 'destructive',
         onPress: async () => {
-          await deleteAiModel(m.id);
-          await deleteModelKey(m.id);
-          hapticLight();
-          reload();
+          try {
+            await deleteAiModel(m.id);
+            await deleteModelKey(m.id);
+            hapticLight();
+            reload();
+          } catch {
+            hapticError();
+            showToast('删除失败', 'error');
+          }
         },
       },
     ]);
-  }, [reload]);
+  }, [reload, showToast]);
 
   const handleAddCustom = useCallback(async (name: string, baseUrl: string, model: string) => {
     if (!name.trim() || !baseUrl.trim() || !model.trim()) {
@@ -89,6 +104,7 @@ export default function AiSettingsScreen({ onBack }: Props) {
       reload();
     } catch {
       hapticError();
+      showToast('添加失败', 'error');
     }
   }, [showToast, reload]);
 
