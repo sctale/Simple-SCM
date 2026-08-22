@@ -31,16 +31,17 @@ export default function Toast({ toast, onHide, duration = 2000 }: Props) {
         Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 8 }),
       ]).start();
       timer.current = setTimeout(() => {
-        Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => onHide());
+        Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(({ finished }) => { if (finished) onHide(); });
       }, duration);
     } else {
       opacity.setValue(0);
+      translateY.setValue(12);
     }
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast.visible, toast.message]);
+  }, [toast.visible, toast.message, toast.type]);
 
   if (!toast.visible) return null;
   const bg = toast.type === 'error' ? '#EF5350' : toast.type === 'info' ? '#3F51B5' : '#26A69A';

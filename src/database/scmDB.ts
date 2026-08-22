@@ -179,7 +179,13 @@ export async function updateSupplier(id: number, s: Partial<Supplier>): Promise<
 
 export async function deleteSupplier(id: number): Promise<void> {
   const database = await getDB();
-  await database.runAsync('DELETE FROM suppliers WHERE id = ?', [id]);
+  await database.withTransactionAsync(async () => {
+    // 调研记录保留，供应商置空（变为通用调研）
+    await database.runAsync('UPDATE research_entries SET supplier_id = NULL WHERE supplier_id = ?', [id]);
+    await database.runAsync('DELETE FROM insights WHERE target_type = ? AND target_id = ?', ['supplier', id]);
+    await database.runAsync('DELETE FROM risks WHERE target_type = ? AND target_id = ?', ['supplier', id]);
+    await database.runAsync('DELETE FROM suppliers WHERE id = ?', [id]);
+  });
 }
 
 function mapSupplier(r: Record<string, unknown>): Supplier {
@@ -243,6 +249,9 @@ export async function deleteCategory(id: number): Promise<void> {
   const database = await getDB();
   await database.withTransactionAsync(async () => {
     await database.runAsync('UPDATE suppliers SET category_id = NULL WHERE category_id = ?', [id]);
+    await database.runAsync('UPDATE research_entries SET category_id = NULL WHERE category_id = ?', [id]);
+    await database.runAsync('DELETE FROM insights WHERE target_type = ? AND target_id = ?', ['category', id]);
+    await database.runAsync('DELETE FROM risks WHERE target_type = ? AND target_id = ?', ['category', id]);
     await database.runAsync('DELETE FROM categories WHERE id = ?', [id]);
   });
 }
@@ -307,6 +316,13 @@ function mapInsight(r: Record<string, unknown>): Insight {
 // ===== 调研 =====
 export async function getResearchEntries(supplierId?: number, categoryId?: number): Promise<ResearchEntry[]> {
   const database = await getDB();
+  if (supplierId != null && categoryId != null) {
+    const rows = await database.getAllAsync<Record<string, unknown>>(
+      'SELECT * FROM research_entries WHERE supplier_id=? AND category_id=? ORDER BY created_at DESC',
+      [supplierId, categoryId]
+    );
+    return rows.map(mapResearch);
+  }
   if (supplierId != null) {
     const rows = await database.getAllAsync<Record<string, unknown>>(
       'SELECT * FROM research_entries WHERE supplier_id=? ORDER BY created_at DESC', [supplierId]
@@ -571,8 +587,63 @@ export async function importBackup(data: BackupData, mode: 'replace' | 'merge'):
         DELETE FROM categories;
         DELETE FROM ai_models;
         DELETE FROM research_templates;
+        DELETE FROM app_settings;
       `);
       // 内置模板随备份恢复（备份同时含内置与自定义模板）
+    }
+
+    // 合并模式：备份旧 ID -> 本地 ID 映射（含同名去重命中的已有行），用于外键重映射
+    const categoryIdMap = new Map<number, number>();
+    const supplierIdMap = new Map<number, number>();
+    const remapCategoryId = (id: number | null): number | null =>
+      id == null ? null : (categoryIdMap.get(id) ?? null);
+    const remapSupplierId = (id: number | null): number | null =>
+      id == null ? null : (supplierIdMap.get(id) ?? null);
+    const remapTargetId = (targetType: InsightTargetType, targetId: number | null): number | null => {
+      if (targetType === 'supplier') return remapSupplierId(targetId);
+      if (targetType === 'category') return remapCategoryId(targetId);
+      return targetId;
+    };
+
+    // 品类先于供应商插入：供应商的 category_id 需要通过品类映射重映射
+    for (const c of data.categories) {
+      if (mode === 'replace') {
+        await database.runAsync(
+          `INSERT INTO categories (id, name, parent_id, kraljic_x, kraljic_y, strategy, note, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [c.id, c.name, c.parentId, c.kraljicX, c.kraljicY, c.strategy, c.note, c.createdAt]
+        );
+      } else {
+        // 同名品类已存在：映射到本地行并跳过插入
+        const existing = await database.getFirstAsync<{ id: number }>(
+          'SELECT id FROM categories WHERE name = ?', [c.name]
+        );
+        if (existing) {
+          categoryIdMap.set(c.id, Number(existing.id));
+          continue;
+        }
+        // 两遍法第一遍：先以 parent_id NULL 插入，避免引用尚未插入的父品类
+        const result = await database.runAsync(
+          `INSERT INTO categories (name, parent_id, kraljic_x, kraljic_y, strategy, note, created_at)
+           VALUES (?, NULL, ?, ?, ?, ?, ?)`,
+          [c.name, c.kraljicX, c.kraljicY, c.strategy, c.note, c.createdAt]
+        );
+        categoryIdMap.set(c.id, result.lastInsertRowId);
+      }
+    }
+
+    if (mode === 'merge') {
+      // 两遍法第二遍：回填 parent_id（仅当旧父 ID 存在于映射中）
+      for (const c of data.categories) {
+        if (c.parentId == null) continue;
+        const newParentId = categoryIdMap.get(c.parentId);
+        const newId = categoryIdMap.get(c.id);
+        if (newParentId == null || newId == null) continue;
+        await database.runAsync(
+          'UPDATE categories SET parent_id = ? WHERE id = ?',
+          [newParentId, newId]
+        );
+      }
     }
 
     for (const s of data.suppliers) {
@@ -583,49 +654,70 @@ export async function importBackup(data: BackupData, mode: 'replace' | 'merge'):
           [s.id, s.name, s.code, s.categoryId, s.grade, s.status, s.contact, s.phone, s.email, s.note, s.createdAt, s.updatedAt]
         );
       } else {
-        await database.runAsync(
+        // 同名供应商已存在：映射到本地行并跳过插入
+        const existing = await database.getFirstAsync<{ id: number }>(
+          'SELECT id FROM suppliers WHERE name = ?', [s.name]
+        );
+        if (existing) {
+          supplierIdMap.set(s.id, Number(existing.id));
+          continue;
+        }
+        const result = await database.runAsync(
           `INSERT INTO suppliers (name, code, category_id, grade, status, contact, phone, email, note, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [s.name, s.code, s.categoryId, s.grade, s.status, s.contact, s.phone, s.email, s.note, s.createdAt, s.updatedAt]
+          [s.name, s.code, remapCategoryId(s.categoryId), s.grade, s.status, s.contact, s.phone, s.email, s.note, s.createdAt, s.updatedAt]
         );
-      }
-    }
-
-    for (const c of data.categories) {
-      if (mode === 'replace') {
-        await database.runAsync(
-          `INSERT INTO categories (id, name, parent_id, kraljic_x, kraljic_y, strategy, note, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [c.id, c.name, c.parentId, c.kraljicX, c.kraljicY, c.strategy, c.note, c.createdAt]
-        );
-      } else {
-        await database.runAsync(
-          `INSERT INTO categories (name, parent_id, kraljic_x, kraljic_y, strategy, note, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [c.name, c.parentId, c.kraljicX, c.kraljicY, c.strategy, c.note, c.createdAt]
-        );
+        supplierIdMap.set(s.id, result.lastInsertRowId);
       }
     }
 
     for (const i of data.insights) {
+      if (mode === 'merge') {
+        const exists = await database.getFirstAsync<{ c: number }>(
+          'SELECT COUNT(*) as c FROM insights WHERE content = ? AND created_at = ?', [i.content, i.createdAt]
+        );
+        if ((exists?.c ?? 0) > 0) continue;
+      }
       await database.runAsync(
         'INSERT INTO insights (content, target_type, target_id, tag, created_at) VALUES (?, ?, ?, ?, ?)',
-        [i.content, i.targetType, i.targetId, i.tag, i.createdAt]
+        [i.content, i.targetType, mode === 'merge' ? remapTargetId(i.targetType, i.targetId) : i.targetId, i.tag, i.createdAt]
       );
     }
     for (const e of data.researchEntries) {
+      if (mode === 'merge') {
+        const exists = await database.getFirstAsync<{ c: number }>(
+          'SELECT COUNT(*) as c FROM research_entries WHERE question = ? AND created_at = ?', [e.question, e.createdAt]
+        );
+        if ((exists?.c ?? 0) > 0) continue;
+      }
       await database.runAsync(
         'INSERT INTO research_entries (supplier_id, category_id, type, question, content, rating, conclusion, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [e.supplierId, e.categoryId, e.type, e.question, e.content, e.rating, e.conclusion, e.createdAt]
+        [
+          mode === 'merge' ? remapSupplierId(e.supplierId) : e.supplierId,
+          mode === 'merge' ? remapCategoryId(e.categoryId) : e.categoryId,
+          e.type, e.question, e.content, e.rating, e.conclusion, e.createdAt,
+        ]
       );
     }
     for (const r of data.risks) {
+      if (mode === 'merge') {
+        const exists = await database.getFirstAsync<{ c: number }>(
+          'SELECT COUNT(*) as c FROM risks WHERE title = ? AND created_at = ?', [r.title, r.createdAt]
+        );
+        if ((exists?.c ?? 0) > 0) continue;
+      }
       await database.runAsync(
         'INSERT INTO risks (title, target_type, target_id, probability, impact, strategy, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [r.title, r.targetType, r.targetId, r.probability, r.impact, r.strategy, r.status, r.createdAt]
+        [r.title, r.targetType, mode === 'merge' ? remapTargetId(r.targetType, r.targetId) : r.targetId, r.probability, r.impact, r.strategy, r.status, r.createdAt]
       );
     }
     for (const a of data.actionItems) {
+      if (mode === 'merge') {
+        const exists = await database.getFirstAsync<{ c: number }>(
+          'SELECT COUNT(*) as c FROM action_items WHERE title = ? AND created_at = ?', [a.title, a.createdAt]
+        );
+        if ((exists?.c ?? 0) > 0) continue;
+      }
       await database.runAsync(
         'INSERT INTO action_items (title, owner, due_date, done, created_at) VALUES (?, ?, ?, ?, ?)',
         [a.title, a.owner, a.dueDate, a.done ? 1 : 0, a.createdAt]
@@ -638,10 +730,15 @@ export async function importBackup(data: BackupData, mode: 'replace' | 'merge'):
           [m.id, m.name, m.baseUrl, m.model, m.isBuiltin ? 1 : 0, m.temperature, m.createdAt]
         );
       } else {
-        await database.runAsync(
-          'INSERT INTO ai_models (name, base_url, model, is_builtin, temperature, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-          [m.name, m.baseUrl, m.model, m.isBuiltin ? 1 : 0, m.temperature, m.createdAt]
+        const exists = await database.getFirstAsync<{ c: number }>(
+          'SELECT COUNT(*) as c FROM ai_models WHERE name = ?', [m.name]
         );
+        if ((exists?.c ?? 0) === 0) {
+          await database.runAsync(
+            'INSERT INTO ai_models (name, base_url, model, is_builtin, temperature, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+            [m.name, m.baseUrl, m.model, m.isBuiltin ? 1 : 0, m.temperature, m.createdAt]
+          );
+        }
       }
     }
     for (const [k, v] of Object.entries(data.settings)) {
@@ -660,7 +757,7 @@ export async function importBackup(data: BackupData, mode: 'replace' | 'merge'):
         );
       } else {
         const exists = await database.getFirstAsync<{ c: number }>(
-          'SELECT COUNT(*) as c FROM research_templates WHERE name = ?', [t.name]
+          'SELECT COUNT(*) as c FROM research_templates WHERE name = ? AND questions = ?', [t.name, t.questions]
         );
         if ((exists?.c ?? 0) === 0) {
           await database.runAsync(
@@ -671,4 +768,13 @@ export async function importBackup(data: BackupData, mode: 'replace' | 'merge'):
       }
     }
   });
+}
+
+export async function runInTransaction<T>(fn: (database: SQLite.SQLiteDatabase) => Promise<T>): Promise<T> {
+  const database = await getDB();
+  let result: T;
+  await database.withTransactionAsync(async () => {
+    result = await fn(database);
+  });
+  return result!;
 }

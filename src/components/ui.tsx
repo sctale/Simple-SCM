@@ -27,8 +27,10 @@ export function Chip({ label, active, color, onPress, style }: ChipProps) {
   const fg = active ? '#FFFFFF' : COLORS.textSecondary;
   return (
     <Pressable
-      style={[styles.chip, { backgroundColor: bg, borderColor: bg }, active && styles.chipActiveShadow, style]}
+      style={[styles.chip, { backgroundColor: bg, borderColor: active ? (color ?? COLORS.accent) : COLORS.border }, active && styles.chipActiveShadow, style]}
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={active ? { selected: true } : { selected: false }}
       android_ripple={{ color: 'rgba(0,0,0,0.05)', borderless: true }}
     >
       <Text style={[styles.chipText, { color: fg }]}>{label}</Text>

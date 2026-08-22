@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { DeviceEventEmitter, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, DeviceEventEmitter, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS, FONT_SIZE, INSIGHT_TAGS, RADIUS, SCM_EVENTS, SHADOW, SHADOW_PRIMARY, SPACING, getInsightTagDef } from '../constants';
@@ -81,15 +81,23 @@ export default function HomeScreen({ onGoSupplier, onGoCategory, onGoResearch }:
     }
   }, [quickText, quickTag, showToast, reload]);
 
-  const handleDeleteInsight = useCallback(async (id: number) => {
-    try {
-      await deleteInsight(id);
-      hapticLight();
-      DeviceEventEmitter.emit(SCM_EVENTS.INSIGHT_CHANGED);
-      reload();
-    } catch {
-      hapticError();
-    }
+  const handleDeleteInsight = useCallback((id: number) => {
+    Alert.alert('删除洞察', '确定删除这条洞察记录吗？', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '删除', style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteInsight(id);
+            hapticLight();
+            DeviceEventEmitter.emit(SCM_EVENTS.INSIGHT_CHANGED);
+            reload();
+          } catch {
+            hapticError();
+          }
+        },
+      },
+    ]);
   }, [reload]);
 
   const stats = useMemo(() => [

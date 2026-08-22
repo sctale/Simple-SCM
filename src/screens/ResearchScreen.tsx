@@ -133,6 +133,7 @@ export default function ResearchScreen() {
           filtered.map((e) => {
             const t = getResearchTypeDef(e.type);
             const target = supplierName(e.supplierId) || categoryName(e.categoryId) || '通用';
+            const rating = Math.max(0, Math.min(5, e.rating ?? 0));
             return (
               <View key={e.id} style={styles.entryCard}>
                 <View style={styles.entryTop}>
@@ -148,7 +149,7 @@ export default function ResearchScreen() {
                 <View style={styles.entryMeta}>
                   <Text style={styles.metaText}>{target}</Text>
                   {e.rating != null ? (
-                    <Text style={styles.ratingText}>{'★'.repeat(e.rating)}{'☆'.repeat(5 - e.rating)}</Text>
+                    <Text style={styles.ratingText}>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</Text>
                   ) : null}
                   <Text style={styles.metaDivider}>·</Text>
                   <Text style={styles.metaText}>{relativeTime(e.createdAt)}</Text>
